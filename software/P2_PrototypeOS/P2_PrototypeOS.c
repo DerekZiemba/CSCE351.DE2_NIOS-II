@@ -5,7 +5,7 @@
 ***********************************************************************/
 /* Note: Made it a variable so I can change it in the debugger.  */
 static alt_alarm alarm;
-static ThreadQueue *threads;
+static ThreadQueue threads;
 
 
 // Creates a thread and adds it to the ready queue
@@ -39,7 +39,7 @@ TCB *mythread_create(void (*start_routine)(alt_u32), alt_u32 thread_id,  threadS
 	memcpy(tcb->sp + 0, &mythread_cleanup, 4); //ra Will return here after executing start_routine
 
 	//I think th eproblem is right here.
-	memcpy(tcb->sp + 84/4, &tcb->fp, 4);//fp
+	//memcpy(tcb->sp + 128/4, &tcb->fp, 4);//fp
 
 	alt_printf("Finished creation (%x): sp: (%x)\n", thread_id, tcb->context);
 	return tcb;
@@ -64,46 +64,55 @@ alt_u64 mythread_scheduler(alt_u64 param_list){ // context pointer
 	alt_u16 nThreadsReady = ThreadCount(threads, READY);
 	alt_u16 nThreadsWaiting = ThreadCount(threads, WAITING);
 
+	static alt_u32 originalFP = 0;
 	sprintf(str, "RunningThreads=%d | ReadyThreads=%d | WaitingThreads=%d", nThreadsRunning, nThreadsReady, nThreadsWaiting);
-	if(nThreadsReady > 0 || nThreadsWaiting > 0){
+	if(nThreadsRunning > 0 || nThreadsReady > 0 || nThreadsWaiting > 0){
 
 		/*Create a main thread or dequeue the current running one. */
 		if(nThreadsRunning == 0){
-			thisThread = malloc(sizeof(TCB));
-			thisThread->thread_id = MAIN_THREAD_ID;
-			thisThread->scheduling_status = READY;
+//			thisThread = malloc(sizeof(TCB));
+//			thisThread->thread_id = MAIN_THREAD_ID;
+//			thisThread->scheduling_status = READY;
+//			thisThread->sp = stackpointer;
+//			thisThread->fp = framepointer;
+//			EnqueueThread(threads, thisThread->scheduling_status, thisThread);
+			thisThread = DequeueThread(threads, nThreadsReady > 0 ? READY : WAITING);
+			thisThread->sp = stackpointer;
+			thisThread->fp = framepointer;
+			nextThread = thisThread;
+			originalFP = framepointer;
+
 		} else if(nThreadsRunning > 0) {
 			thisThread = DequeueThread(threads, RUNNING);
 			if(thisThread->scheduling_status == RUNNING ){
 				thisThread->scheduling_status = READY;
 			}
-		}
-		thisThread->sp = stackpointer;
-		thisThread->fp = framepointer;
-		EnqueueThread(threads, thisThread->scheduling_status, thisThread);
+			thisThread->sp = &stackpointer;
+			thisThread->fp = &framepointer;
 
-		/*Dequeue either a Ready or Waiting thread */
-		nextThread = DequeueThread(threads, nThreadsReady > 0 ? READY : WAITING);
-		if(nThreadsRunning ==0){
-			nextThread->sp = stackpointer;
-			nextThread->fp = framepointer;
+			if (nThreadsReady>0){
+				EnqueueThread(threads, thisThread->scheduling_status, thisThread);
+				nextThread = DequeueThread(threads, READY);
+			} else if (nThreadsWaiting > 0){
+				EnqueueThread(threads, thisThread->scheduling_status, thisThread);
+				nextThread = DequeueThread(threads, WAITING);
+			} else {
+				nextThread = thisThread;
+			}
+
+			//nextThread->sp = stackpointer;
+			//nextThread->fp = framepointer;
 		}
-		//nextThread->sp = stackpointer;
-		//nextThread->fp = framepointer;
+
 		nextThread->scheduling_status = RUNNING;
-		EnqueueThread(threads, RUNNING, nextThread);
-
+		EnqueueThread(threads, nextThread->scheduling_status, nextThread);
 
 		*(retptr) = nextThread->sp;
 		*(retptr + 1) = nextThread->fp;
 		sprintf(str + strlen(str), " | Queueing ThreadID=%lu | Scheduling ThreadID=%lu", thisThread->thread_id, nextThread->thread_id);
 	}
-	else if (nThreadsRunning > 0 && nThreadsReady == 0 && nThreadsWaiting == 0){
-		sprintf(str + strlen(str), " | No Queued Threads");
-		returnValue = param_list;
-	}
 	else {
-		sprintf(str + strlen(str), " | No Threads???...");
+		sprintf(str + strlen(str), " | No Queued Threads");
 		returnValue = param_list;
 	}
 
@@ -217,6 +226,7 @@ void prototype_os(void) {
 		}
 	}
 }
+
 
 alt_u32 myinterrupt_handler(void* context) {
 	alt_u32 counter = *(alt_u32 *)context;
