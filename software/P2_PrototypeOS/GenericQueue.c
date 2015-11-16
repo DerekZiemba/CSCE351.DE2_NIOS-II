@@ -50,11 +50,11 @@ void Queue_Enqueue(Queue *q, TCB *data) {
 		//This is a limitless Queue
 	}
 	else if(q->count < 0 || q->maxsize < 0) {
-	//	printf("ERROR: Invalid Pointer To Queue\n");
+		printf("ERROR: Invalid Pointer To Queue\n");
 		return;
 	}
 	else if (q->count >= q->maxsize) {
-	//	printf("ERROR: Queue is Full\n");
+		printf("ERROR: Queue is Full\n");
 		return;
 	}
 	node_t  *elem = Node_init(data);
@@ -73,7 +73,7 @@ void Queue_Enqueue(Queue *q, TCB *data) {
 //void* Queue_Dequeue(Queue *q) {
 TCB* Queue_Dequeue(Queue *q) {
 	if (q->count < 0 || q->maxsize < 0) {
-		//printf("ERROR: Invalid Pointer To Queue\n");
+		printf("ERROR: Invalid Pointer To Queue\n");
 		return NULL;
 	}
 	
@@ -105,7 +105,7 @@ TCB* Queue_Dequeue(Queue *q) {
 		}
 	}
 	else {
-		//printf("ERROR: Nothing to Dequeue\n");
+		printf("ERROR: Nothing to Dequeue\n");
 	}
 	return data;
 }

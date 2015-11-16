@@ -33,8 +33,8 @@ typedef enum bool { false = FALSE, true  = TRUE} bool;
 /***********************************************************************
 * Thread Structures
 ***********************************************************************/
-typedef enum threadStatus { UNKNOWN=0, RUNNING = 1,READY = 2, WAITING = 3, START = 4, DONE = 5} threadStatus;
-#define numberOfThreadStatuses  6 // 6 queues: Unknown, Running, Ready, Waiting, Start, Done
+typedef enum threadStatus {  READY = 0, RUNNING = 1,  WAITING = 2,  DONE = 3} threadStatus;
+#define numberOfThreadStatuses  4 // 6 queues:  Running, Ready, Waiting, Done
 
 typedef struct ThreadControlBlock {
 	alt_u32 thread_id;
@@ -92,6 +92,7 @@ typedef struct ThreadQueue {
 } ThreadQueue;
 
 ThreadQueue* ThreadQueue_init();
+alt_u32 ThreadCount(ThreadQueue *tq, threadStatus status);
 void EnqueueThread(ThreadQueue *tq, threadStatus status, TCB *tcb);
 TCB * DequeueThread(ThreadQueue *tq, threadStatus status);
 TCB * PeekThread(ThreadQueue *tq, threadStatus status);
@@ -115,6 +116,7 @@ void mythread_cleanup();
 ***********************************************************************/
 static volatile int timer_interrupt_flag;
 int check_timer_flag();
+void set_timer_flag();
 void reset_timer_flag();
 
 

@@ -5,85 +5,85 @@
 ***********************************************************************/
 /* Note: Made it a variable so I can change it in the debugger.  */
 static alt_alarm alarm;
-static volatile ThreadQueue *threads;
-static TCB *(running_thread);
+static ThreadQueue *threads;
 
-alt_u32 myinterrupt_handler(void* context) {
-	alt_u32 counter = *(alt_u32 *)context;
-	/* This function is called once per second by default.  It is a callback function */
-	printf("Interrupted! Elapsed=%lu ticks, Period=%lu, Loop Iterations: %lu.\n", alt_nticks(), ALARMTICKS(QUANTUM_LENGTH), counter);
-	//j=0; // It's able to sometimes beat the interrupt.  It averages 205,240 cycles.
-	// Here: the global flag is used to indicate a timer interrupt
-	timer_interrupt_flag = 1;
-	return ALARMTICKS(QUANTUM_LENGTH);
-}
 
 
 // This is the scheduler. It works with Injection.S to switch between threads
 alt_u64 mythread_scheduler(alt_u64 param_list){ // context pointer
-	//DISABLE_INTERRUPTS
+	DISABLE_INTERRUPTS
+	char str[80];
+	strcpy(str,"RunningThreads=%d | ReadyThreads=%d | WaitingThreads=%d ");
+
+	TCB *thisThread;
+	TCB *nextThread;
+
+	alt_u64 returnValue;
+	alt_u32 * retptr = &returnValue;
+
 	alt_u32 * param_ptr = 	&param_list;
 	alt_u32 stackpointer =  *param_ptr; //Returns in register r4
 	alt_u32 framepointer =  *(param_ptr+1); //Returns in register r5
 
+	alt_u32 nRunningThreads = ThreadCount(threads,RUNNING);
+	alt_u32 nReadyThreads = ThreadCount(threads, READY);
+	alt_u32 nWaitingThreads = ThreadCount(threads,WAITING);
 
-	//TCB *running_thread = PeekThread(threads,RUNNING);
-	bool bAlreadySetMainThread = false;
-	if(running_thread == NULL){
-		running_thread = DequeueThread(threads, READY);
-		if(bAlreadySetMainThread){
-			alt_printf("No Running Thread and already created a main thread.");
-		}
-//		running_thread = malloc(sizeof(TCB));
-//		running_thread->thread_id = MAIN_THREAD_ID;
-//		running_thread->sp = stackpointer;
-//		running_thread->fp = framepointer;
+	if(nRunningThreads == 0 && (nReadyThreads != 0 || nWaitingThreads != 0)){
+		thisThread = malloc(sizeof(TCB));
+		thisThread->sp = stackpointer;
+		thisThread->fp = framepointer;
+		thisThread->thread_id = MAIN_THREAD_ID;
+		thisThread->scheduling_status = READY;
+		EnqueueThread(threads, READY, thisThread);
 
-		running_thread->scheduling_status = RUNNING;
-		//EnqueueThread(threads, RUNNING, running_thread);
-//		bAlreadySetMainThread = true;
-	}
-	running_thread->sp = stackpointer;
-	running_thread->fp = framepointer;
-
-	TCB *nextThread = DequeueThread(threads, READY);
-	if (nextThread != NULL){ //Check if one was available for popping from the ready queue
-		if (running_thread->scheduling_status == RUNNING) {
-			running_thread->scheduling_status = READY;
-		}
-
-		EnqueueThread(threads, running_thread->scheduling_status, running_thread);
+		nextThread = DequeueThread(threads, nReadyThreads > 0 ? READY : WAITING);
+		nextThread->sp = stackpointer;
+		nextThread->fp = framepointer;
 		nextThread->scheduling_status = RUNNING;
-		running_thread = nextThread;
+		EnqueueThread(threads, RUNNING, nextThread);
 
-	} else { // No other threads available
-		alt_printf("Thread Queue Empty!\n");
-		running_thread->scheduling_status = RUNNING;
-		return 0;
+		*(retptr) = nextThread->sp;
+		*(retptr + 1) = nextThread->fp;
+		strcat(str,"| Scheduling Thread\n");
+	}
+	else if (nRunningThreads > 0 && (nReadyThreads > 0 ||  nWaitingThreads > 0)){
+		thisThread = DequeueThread(threads, RUNNING);
+		thisThread->sp = stackpointer;
+		thisThread->fp = framepointer;
+		if(thisThread->scheduling_status == RUNNING ){
+			thisThread->scheduling_status = READY;
+		}
+		EnqueueThread(threads, thisThread->scheduling_status, thisThread);
+
+		//If there is one or more ready threads, dequeue that, else dequeue the waiting thread.
+		nextThread = DequeueThread(threads, nReadyThreads > 0 ? READY : WAITING);
+		//nextThread->sp = stackpointer;
+		//nextThread->fp = framepointer;
+		nextThread->scheduling_status = RUNNING;
+		EnqueueThread(threads, RUNNING, nextThread);
+
+
+		*(retptr) = nextThread->sp;
+		*(retptr + 1) = nextThread->fp;
+		strcat(str,"| Scheduling Thread\n");
+	}
+	else if (nRunningThreads > 0 && nReadyThreads == 0 && nWaitingThreads == 0){
+		strcat(str,"| No Queued Threads\n");
+		returnValue = param_list;
+	}
+	else {
+		strcat(str,"| No Threads???...\n");
+		returnValue = param_list;
 	}
 
-	// Prepare values to return
-	alt_u64 ret_list;
-	alt_u32 * rets = &ret_list;
-	*(rets) = running_thread->sp;
-	*(rets + 1) = running_thread->fp;
-
-	//ENABLE_INTERRUPTS //Enabling interupts here causes it to jump back up to running_thread->sp = stackpointer;
-
-	return ret_list;
+	//ENABLE_INTERRUPTS
+	printf(str, nRunningThreads, nReadyThreads, nWaitingThreads);
+	return returnValue;
 }
 
 
-// Provided thread code
-void mythread(alt_u32 thread_id){
-	// The declaration of j as an integer was added on 10/24/2011
-	int i, j, n;
-	n = (thread_id % 2 == 0)? 10: 15;
-	for (i = 0; i < n; i++){
-		printf("This is message %d of thread #%d.\n", i, thread_id);
-		for (j = 0; j < MAX; j++);
-	}
-}
+
 
 // Creates a thread and adds it to the ready queue
 TCB *mythread_create(void (*start_routine)(alt_u32), alt_u32 thread_id,  threadStatus status ) {
@@ -128,15 +128,15 @@ TCB *mythread_create(void (*start_routine)(alt_u32), alt_u32 thread_id,  threadS
 void mythread_join(alt_u32 thread_id){
 	int i=0;
 
-//	DISABLE_INTERRUPTS
-//	// Wait for timer the first time
-//	TCB *running_thread = PeekThread(threads,RUNNING);
-//	ENABLE_INTERRUPTS
+	DISABLE_INTERRUPTS
+	// Wait for timer the first time
+	TCB *running_thread = PeekThread(threads,RUNNING);
+	ENABLE_INTERRUPTS
 	while (running_thread == NULL){
 		for (i = 0 ; i < MAX; i++);
-//		DISABLE_INTERRUPTS
-//		running_thread = PeekThread(threads,RUNNING);
-//		ENABLE_INTERRUPTS
+		DISABLE_INTERRUPTS
+		running_thread = PeekThread(threads,RUNNING);
+		ENABLE_INTERRUPTS
 	}
 
 	int calling_id = running_thread->thread_id;
@@ -162,6 +162,7 @@ void mythread_cleanup(){
 	// Unblock thread blocked by join
 	DISABLE_INTERRUPTS
 
+	TCB *running_thread = PeekThread(threads,RUNNING);
 	TCB *blockedTCB = NULL;
 	int id = running_thread->blocking_id;
 
@@ -187,32 +188,26 @@ void mythread_cleanup(){
 	while(TRUE);
 }
 
-int check_timer_flag(){
-	return timer_interrupt_flag; //returns in registers (2 and 3)
-}
 
-void reset_timer_flag(){
-	timer_interrupt_flag = 0; //returns in registers (2 and 3)
-}
 
-/***************************************************************************
+/*********************************************************************
 * Prototype OS
 ****************************************************************************/
 void prototype_os(void) {
 	printf("Started.%lu\n", ALARMTICKS(QUANTUM_LENGTH));
+	alt_u32 i, j, iterations = 0;
+
+	// Here: initialize the timer and its interrupt handler
+	alt_alarm_start(&alarm, ALARMTICKS(QUANTUM_LENGTH), myinterrupt_handler, (void*)(&iterations));
 
 	threads = ThreadQueue_init();
 
-	alt_u32 i = 0;
 	for (i = 0; i < NUM_THREADS; i++){
 		// Here: call mythread_join to suspend prototype_os
 		TCB *tcb = mythread_create(&mythread, i, READY);
 		EnqueueThread(threads, READY, tcb);
 	}
 
-	alt_u32 j = 0;
-	// Here: initialize the timer and its interrupt handler
-	alt_alarm_start(&alarm, ALARMTICKS(QUANTUM_LENGTH), myinterrupt_handler, (void*)(&j));
 
 	for (i = 0; i < NUM_THREADS; i++){
 		// Here: call mythread_join to suspend prototype_os
@@ -224,12 +219,35 @@ void prototype_os(void) {
 
 		//Here: think about what MAX is used for. Pick up an appropriate value for it experimentally.
 		for (j = 0; j < 150000; j++) {
+			iterations++;
 			//With 110633 as the Max and no nop's, the interrupt interrupts right in the middle of printing the above sentence.
 			asm("nop"); //One nop reduces collisions
 			asm("nop");  //further reduces collisions.
 		}
 	}
 }
+
+alt_u32 myinterrupt_handler(void* context) {
+	alt_u32 counter = *(alt_u32 *)context;
+	alt_u32 ticks = ALARMTICKS(QUANTUM_LENGTH);
+	printf("Interrupted! Elapsed=%lu ticks, Period=%lu, Main Loop Iterations: %lu.\n", alt_nticks(), ticks, counter);
+	set_timer_flag();
+	return ticks;
+}
+
+// Provided thread code.  Cannot be modified
+void mythread(alt_u32 thread_id){
+	int i, j, n;
+	n = (thread_id % 2 == 0)? 10: 15;
+	for (i = 0; i < n; i++){
+		printf("This is message %d of thread #%d.\n", i, thread_id);
+		for (j = 0; j < MAX; j++);
+	}
+}
+
+int check_timer_flag(){ return timer_interrupt_flag; }
+void set_timer_flag(){ timer_interrupt_flag = 1; }
+void reset_timer_flag(){ timer_interrupt_flag = 0; }
 
 /***********************************************************************
 * Entry Point

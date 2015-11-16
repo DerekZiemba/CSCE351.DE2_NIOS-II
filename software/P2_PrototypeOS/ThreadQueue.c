@@ -22,11 +22,15 @@ ThreadQueue* ThreadQueue_init() {
 	return tq;
 }
 
+alt_u32 ThreadCount(ThreadQueue *tq, threadStatus status){
+	return (tq->threadQueues[status])->count;
+}
 
 void EnqueueThread(ThreadQueue *tq, threadStatus status, TCB *tcb) {
-	if(status < UNKNOWN || status > DONE){
-		//alt_printf("ERROR: Invalid Thread Status.  Possible Null Thread.\n");
+	if(status < READY || status > DONE){
+		alt_printf("ERROR: Invalid Thread Status.  Possible Null Thread.\n");
 	}
+	//tcb->scheduling_status = status;
 	//Queue_Enqueue(tq->threadQueues[status], (void*) tcb);
 	Queue_Enqueue(tq->threadQueues[status], tcb);
 }
