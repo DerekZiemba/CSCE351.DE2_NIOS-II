@@ -6,8 +6,8 @@
 #include "sys/alt_stdio.h"
 #include "alt_types.h"
 
-#define MAX 75000
-#define QUANTUM_LENGTH 1000
+#define MAX 125000
+#define QUANTUM_LENGTH 2000
 #define NUM_THREADS 12
 #define MAIN_THREAD_ID 31337
 #define NULL_THREAD_ID -1
