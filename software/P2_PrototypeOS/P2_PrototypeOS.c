@@ -12,8 +12,6 @@ static ThreadQueue *threads;
 // This is the scheduler. It works with Injection.S to switch between threads
 alt_u64 mythread_scheduler(alt_u64 param_list){ // context pointer
 	DISABLE_INTERRUPTS
-	char str[80];
-	strcpy(str,"RunningThreads=%d | ReadyThreads=%d | WaitingThreads=%d ");
 
 	TCB *thisThread;
 	TCB *nextThread;
@@ -25,60 +23,51 @@ alt_u64 mythread_scheduler(alt_u64 param_list){ // context pointer
 	alt_u32 stackpointer =  *param_ptr; //Returns in register r4
 	alt_u32 framepointer =  *(param_ptr+1); //Returns in register r5
 
-	alt_u32 nRunningThreads = ThreadCount(threads,RUNNING);
-	alt_u32 nReadyThreads = ThreadCount(threads, READY);
-	alt_u32 nWaitingThreads = ThreadCount(threads,WAITING);
+	alt_u32 nThreadsRunning = ThreadCount(threads,RUNNING);
+	alt_u32 nThreadsReady = ThreadCount(threads, READY);
+	alt_u32 nThreadsWaiting = ThreadCount(threads, WAITING);
 
-	if(nRunningThreads == 0 && (nReadyThreads != 0 || nWaitingThreads != 0)){
-		thisThread = malloc(sizeof(TCB));
+	printf("RunningThreads=%d | ReadyThreads=%d | WaitingThreads=%d", nThreadsRunning, nThreadsReady, nThreadsWaiting);
+
+	if(nThreadsReady > 0 || nThreadsWaiting > 0){
+		/*Create a main thread or dequeue the current running one. */
+		if(nThreadsRunning == 0){
+			thisThread = malloc(sizeof(TCB));
+			thisThread->thread_id = MAIN_THREAD_ID;
+			thisThread->scheduling_status = READY;
+		} else if(nThreadsRunning > 0) {
+			thisThread = DequeueThread(threads, RUNNING);
+			if(thisThread->scheduling_status == RUNNING ){
+				thisThread->scheduling_status = READY;
+			}
+		}
 		thisThread->sp = stackpointer;
 		thisThread->fp = framepointer;
-		thisThread->thread_id = MAIN_THREAD_ID;
-		thisThread->scheduling_status = READY;
-		EnqueueThread(threads, READY, thisThread);
+		EnqueueThread(threads, thisThread->scheduling_status, thisThread);
 
-		nextThread = DequeueThread(threads, nReadyThreads > 0 ? READY : WAITING);
+		/*Dequeue either a Ready or Waiting thread */
+		nextThread = DequeueThread(threads, nThreadsReady > 0 ? READY : WAITING);
 		nextThread->sp = stackpointer;
 		nextThread->fp = framepointer;
 		nextThread->scheduling_status = RUNNING;
 		EnqueueThread(threads, RUNNING, nextThread);
 
-		*(retptr) = nextThread->sp;
-		*(retptr + 1) = nextThread->fp;
-		strcat(str,"| Scheduling Thread\n");
-	}
-	else if (nRunningThreads > 0 && (nReadyThreads > 0 ||  nWaitingThreads > 0)){
-		thisThread = DequeueThread(threads, RUNNING);
-		thisThread->sp = stackpointer;
-		thisThread->fp = framepointer;
-		if(thisThread->scheduling_status == RUNNING ){
-			thisThread->scheduling_status = READY;
-		}
-		EnqueueThread(threads, thisThread->scheduling_status, thisThread);
-
-		//If there is one or more ready threads, dequeue that, else dequeue the waiting thread.
-		nextThread = DequeueThread(threads, nReadyThreads > 0 ? READY : WAITING);
-		//nextThread->sp = stackpointer;
-		//nextThread->fp = framepointer;
-		nextThread->scheduling_status = RUNNING;
-		EnqueueThread(threads, RUNNING, nextThread);
-
 
 		*(retptr) = nextThread->sp;
 		*(retptr + 1) = nextThread->fp;
-		strcat(str,"| Scheduling Thread\n");
+		printf(" | Queueing ThreadID=%d | Scheduling ThreadID=%d", thisThread->thread_id, nextThread->thread_id);
 	}
-	else if (nRunningThreads > 0 && nReadyThreads == 0 && nWaitingThreads == 0){
-		strcat(str,"| No Queued Threads\n");
+	else if (nThreadsRunning > 0 && nThreadsReady == 0 && nThreadsWaiting == 0){
+		printf(" | No Queued Threads");
 		returnValue = param_list;
 	}
 	else {
-		strcat(str,"| No Threads???...\n");
+		printf(" | No Threads???...");
 		returnValue = param_list;
 	}
 
 	//ENABLE_INTERRUPTS
-	printf(str, nRunningThreads, nReadyThreads, nWaitingThreads);
+	printf("\n");
 	return returnValue;
 }
 
