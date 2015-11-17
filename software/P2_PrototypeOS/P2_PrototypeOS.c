@@ -8,69 +8,57 @@ static alt_alarm alarm;
 static ThreadQueue *threads;
 
 
-// Creates a thread and adds it to the ready queue
-TCB *mythread_create(void (*start_routine)(alt_u32), alt_u32 thread_id,  threadStatus status ) {
+TCB *mythread_create(void (*start_routine)(alt_u32), alt_u32 thread_id,  threadStatus status, int stacksizeBytes) {
 	TCB *tcb = calloc(1, sizeof(TCB));
 	tcb->thread_id = thread_id;
 	tcb->blocking_id = -1;
 	tcb->scheduling_status = status;
-	tcb->context = malloc(8192);
-	tcb->fp = tcb->context + 8192/4;//8kb stack
-	tcb->sp = tcb->context + 80/4;
 
-	int one = 1;
-	//Gap for muldiv handler
-	//memcpy(tcb->sp + 8/4,  xxxx, 4);//r1
-	//memcpy(tcb->sp + 12/4, xxxx, 4);//r2
-	//memcpy(tcb->sp + 16/4, xxxx, 4);//r3
+	tcb->context = malloc(stacksizeBytes);
+	tcb->fp = tcb->context + stacksizeBytes/4;
+	tcb->sp = tcb->context +(stacksizeBytes/4) - (76/4);
+
 	memcpy(tcb->sp + 20/4, &thread_id, 4);//r4 Argument one, is thread_id
-	//memcpy(tcb->sp + 24/4, &one, 4);//r5 /estatus?
-	//memcpy(tcb->sp + 28/4, xxxx, 4);//r6
-
-	//Location 68 gets loaded into r5 then into estatus.  Store the number one into the lowest byte
-	memcpy(tcb->sp + 68/4, &one, 4);
+	int one = 1;
+	memcpy(tcb->sp + 68/4, &one, 4); 	//Location 68 gets loaded into r5 then into estatus.  Store the number one into the lowest byte
 	memcpy(tcb->sp + 72/4, &start_routine, 4);//ea  Becomes program counter/Instruction that caused the exception
 	memcpy(tcb->sp + 0, &mythread_cleanup, 4); //ra Will return here after executing start_routine
 
-	//I think th eproblem is right here.
-	memcpy(tcb->sp + 80/4, &tcb->fp, 4);//Not sure where to place the frame pointer on the stack
-
-	alt_printf("Finished creation (%x): sp: (%x)\n", thread_id, tcb->context);
 	return tcb;
 }
 
+
 // This is the scheduler. It works with Injection.S to switch between threads
 alt_u64 mythread_scheduler(alt_u64 param_list){ // context pointer
-	DISABLE_INTERRUPTS
-	char str[160];
+	char strBuff[160];
 
 	TCB *thisThread = NULL;
 	TCB *nextThread = NULL;
 	TCB *waitingThread = NULL;//Thread from waiting list is placed in here, if it is not blocked by thisThread, it will then become the nextThread.
 
-	alt_u64 returnValue;
-	alt_u32 * retptr = &returnValue;
-
 	alt_u32 * param_ptr = 	&param_list;
 	alt_u32 stackpointer =  *param_ptr; //Returns in register r4
 	alt_u32 framepointer =  *(param_ptr+1); //Returns in register r5
+
+	alt_u64 returnValue;
+	alt_u32 * retptr = &returnValue;
 
 	alt_u16 nThreadsRunning = ThreadCount(threads,RUNNING);
 	alt_u16 nThreadsReady = ThreadCount(threads, READY);
 	alt_u16 nThreadsWaiting = ThreadCount(threads, WAITING);
 	alt_u16 nThreadsDone = ThreadCount(threads, DONE);
 
-	static alt_u32 originalFP = 0;
-	sprintf(str, "RunningThreads=%d | ReadyThreads=%d | WaitingThreads=%d | DoneThreads=%d", nThreadsRunning, nThreadsReady, nThreadsWaiting, nThreadsDone);
+
+	sprintf(strBuff, "RunningThreads=%d | ReadyThreads=%d | WaitingThreads=%d | DoneThreads=%d", nThreadsRunning, nThreadsReady, nThreadsWaiting, nThreadsDone);
 	if(nThreadsRunning > 0 || nThreadsReady > 0 || nThreadsWaiting > 0){
 
 		/*Create a main thread or dequeue the current running one. */
 		if(nThreadsRunning == 0){
+
 			thisThread = DequeueThread(threads, nThreadsReady > 0 ? READY : WAITING);
 			thisThread->sp = stackpointer;
 			thisThread->fp = framepointer;
 			nextThread = thisThread;
-			originalFP = framepointer;
 
 		} else if(nThreadsRunning > 0) {
 			thisThread = DequeueThread(threads, RUNNING);
@@ -112,16 +100,16 @@ alt_u64 mythread_scheduler(alt_u64 param_list){ // context pointer
 
 		*(retptr) = nextThread->sp;
 		*(retptr + 1) = nextThread->fp;
-		sprintf(str + strlen(str), " | Queueing ThreadID=%x | Scheduling ThreadID=%lu", thisThread->thread_id, nextThread->thread_id);
+		sprintf(strBuff + strlen(strBuff), " | Queueing ThreadID=%x | Scheduling ThreadID=%lu", thisThread->thread_id, nextThread->thread_id);
 	}
 	else {
-		sprintf(str + strlen(str), " | No Queued Threads");
+		sprintf(strBuff + strlen(strBuff), " | No Queued Threads");
 		returnValue = param_list;
 	}
 
 	//ENABLE_INTERRUPTS
-	strcat(str,"\n");
-	printf(str);
+	strcat(strBuff,"\n");
+	printf(strBuff);
 	return returnValue;
 }
 
@@ -193,7 +181,6 @@ void mythread_cleanup(){
 }
 
 
-
 /*********************************************************************
 * Prototype OS
 ****************************************************************************/
@@ -207,11 +194,9 @@ void prototype_os(void) {
 	threads = ThreadQueue_init();
 
 	for (i = 0; i < NUM_THREADS; i++){
-		// Here: call mythread_join to suspend prototype_os
-		TCB *tcb = mythread_create(&mythread, i, READY);
-		EnqueueThread(threads, READY, tcb);
+		EnqueueThread(threads, READY,  mythread_create(&mythread, i, READY, STACK_SIZE));
+		printf("Finished creation (%d): sp: 0x%x\n", i, PeekThread(threads, READY)->context);
 	}
-
 
 	for (i = 0; i < NUM_THREADS; i++){
 		// Here: call mythread_join to suspend prototype_os

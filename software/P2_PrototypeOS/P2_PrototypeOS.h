@@ -11,6 +11,9 @@
 #define NUM_THREADS 12
 #define MAIN_THREAD_ID 31337
 #define NULL_THREAD_ID -1
+#define STACK_SIZE 8192//16384
+
+
 
 /***************************************************************************
 * Boolean Definition
@@ -38,7 +41,7 @@ typedef enum threadStatus {  READY = 0, RUNNING = 1,  WAITING = 2,  DONE = 3} th
 typedef struct ThreadControlBlock {
 	alt_u32 thread_id;
 	threadStatus scheduling_status;
-	alt_u32 *context;
+	void *context;
 	alt_u32 *sp;
 	alt_u32 *fp;
 	alt_u32 blocking_id;
@@ -102,11 +105,11 @@ TCB * PullThreadFromQueue(ThreadQueue *tq, threadStatus status, int thread_id);
 * Function Declarations
 ***********************************************************************/
 void prototype_os(void);
+
 alt_u32 myinterrupt_handler(void* context);
 alt_u64 mythread_scheduler(alt_u64 param_list);
 void mythread(alt_u32 thread_id);
-//TCB* mythread_create(void *(*start_routine)(void*), int thread_id);
-TCB *mythread_create(void (*start_routine)(alt_u32), alt_u32 thread_id, threadStatus status );
+TCB *mythread_create(void (*start_routine)(alt_u32), alt_u32 thread_id,  threadStatus status, int stacksizeBytes);
 void mythread_join(alt_u32 thread_id);
 void mythread_cleanup();
 
