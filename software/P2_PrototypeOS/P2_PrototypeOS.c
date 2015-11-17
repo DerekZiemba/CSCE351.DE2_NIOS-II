@@ -42,10 +42,11 @@ TCB *mythread_create(void (*start_routine)(alt_u32), alt_u32 thread_id,  threadS
 // This is the scheduler. It works with Injection.S to switch between threads
 alt_u64 mythread_scheduler(alt_u64 param_list){ // context pointer
 	DISABLE_INTERRUPTS
-	char str[140];
+	char str[160];
 
-	TCB *thisThread;
-	TCB *nextThread;
+	TCB *thisThread = NULL;
+	TCB *nextThread = NULL;
+	TCB *waitingThread = NULL;//Thread from waiting list is placed in here, if it is not blocked by thisThread, it will then become the nextThread.
 
 	alt_u64 returnValue;
 	alt_u32 * retptr = &returnValue;
@@ -57,19 +58,14 @@ alt_u64 mythread_scheduler(alt_u64 param_list){ // context pointer
 	alt_u16 nThreadsRunning = ThreadCount(threads,RUNNING);
 	alt_u16 nThreadsReady = ThreadCount(threads, READY);
 	alt_u16 nThreadsWaiting = ThreadCount(threads, WAITING);
+	alt_u16 nThreadsDone = ThreadCount(threads, DONE);
 
 	static alt_u32 originalFP = 0;
-	sprintf(str, "RunningThreads=%d | ReadyThreads=%d | WaitingThreads=%d", nThreadsRunning, nThreadsReady, nThreadsWaiting);
+	sprintf(str, "RunningThreads=%d | ReadyThreads=%d | WaitingThreads=%d | DoneThreads=%d", nThreadsRunning, nThreadsReady, nThreadsWaiting, nThreadsDone);
 	if(nThreadsRunning > 0 || nThreadsReady > 0 || nThreadsWaiting > 0){
 
 		/*Create a main thread or dequeue the current running one. */
 		if(nThreadsRunning == 0){
-//			thisThread = malloc(sizeof(TCB));
-//			thisThread->thread_id = MAIN_THREAD_ID;
-//			thisThread->scheduling_status = READY;
-//			thisThread->sp = stackpointer;
-//			thisThread->fp = framepointer;
-//			EnqueueThread(threads, thisThread->scheduling_status, thisThread);
 			thisThread = DequeueThread(threads, nThreadsReady > 0 ? READY : WAITING);
 			thisThread->sp = stackpointer;
 			thisThread->fp = framepointer;
@@ -88,7 +84,23 @@ alt_u64 mythread_scheduler(alt_u64 param_list){ // context pointer
 			if (nThreadsReady>0){
 				nextThread = DequeueThread(threads, READY);
 			} else if (nThreadsWaiting > 0){
-				nextThread = DequeueThread(threads, WAITING);
+				int count = 1;
+				waitingThread = DequeueThread(threads, WAITING);
+				//Iterate through the waiting queue to find one that is not blocked on this thread.
+				while(waitingThread->blocking_id == thisThread->thread_id){
+					if(count > nThreadsWaiting){//In this case all the waiting threads are waiting for thisThread
+						waitingThread = DequeueThread(threads, thisThread->scheduling_status);
+					}
+					else {//If this ones blocked add it to the end of the queue and dequeue the next
+						EnqueueThread(threads, WAITING,waitingThread);
+						waitingThread = DequeueThread(threads, WAITING);
+					}
+					if(count > nThreadsWaiting +1){
+						break;
+					}
+					count++;
+				}
+				nextThread = waitingThread;
 			} else {
 				//Call back out thisThread because there's nothing else to run
 				nextThread = DequeueThread(threads, thisThread->scheduling_status);
@@ -117,7 +129,7 @@ alt_u64 mythread_scheduler(alt_u64 param_list){ // context pointer
 
 // Joins the thread with the calling thread
 void mythread_join(alt_u32 joiningThreadID){
-	int i=0;
+	alt_32 i=0;
 
 	DISABLE_INTERRUPTS
 	// Wait for timer the first time
@@ -146,9 +158,9 @@ void mythread_join(alt_u32 joiningThreadID){
 	}
 	ENABLE_INTERRUPTS
 	// Wait for timer
-//	while (runningThread->scheduling_status == WAITING){
-//		for (i = 0 ; i < MAX; i++);
-//	}
+	while (runningThread->scheduling_status == WAITING){
+		for (i = 0 ; i < MAX*2; i++);
+	}
 }
 
 // Threads return here and space is freed
@@ -189,6 +201,9 @@ void prototype_os(void) {
 	printf("Started.%lu\n", ALARMTICKS(QUANTUM_LENGTH));
 	alt_u32 i, j, iterations = 0;
 
+	// Here: initialize the timer and its interrupt handler
+	alt_alarm_start(&alarm, ALARMTICKS(QUANTUM_LENGTH), myinterrupt_handler, (void*)(&iterations));
+
 	threads = ThreadQueue_init();
 
 	for (i = 0; i < NUM_THREADS; i++){
@@ -196,9 +211,6 @@ void prototype_os(void) {
 		TCB *tcb = mythread_create(&mythread, i, READY);
 		EnqueueThread(threads, READY, tcb);
 	}
-
-	// Here: initialize the timer and its interrupt handler
-	alt_alarm_start(&alarm, ALARMTICKS(QUANTUM_LENGTH), myinterrupt_handler, (void*)(&iterations));
 
 
 	for (i = 0; i < NUM_THREADS; i++){
@@ -245,4 +257,7 @@ void reset_timer_flag(){ timer_interrupt_flag = 0; }
 /***********************************************************************
 * Entry Point
 ***********************************************************************/
-int main() { prototype_os(); return 0; }
+int main() {
+	printf("PrototypeOS ");
+	prototype_os(); return 0;
+}

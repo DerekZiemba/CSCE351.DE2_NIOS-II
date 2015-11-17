@@ -49,11 +49,11 @@ void Queue_Enqueue(Queue *q, TCB *data) {
 	if (q->maxsize == 0) {
 		//This is a limitless Queue
 	}
-	else if(q->count < 0 || q->maxsize < 0) {
+	else if(q->count < 0 || q->maxsize < 0 || q->count > q->maxsize) {
 		printf("ERROR: Invalid Pointer To Queue\n");
 		return;
 	}
-	else if (q->count >= q->maxsize) {
+	else if (q->count == q->maxsize) {
 		printf("ERROR: Queue is Full\n");
 		return;
 	}
