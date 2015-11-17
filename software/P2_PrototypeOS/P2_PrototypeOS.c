@@ -30,6 +30,7 @@ TCB *mythread_create(void (*start_routine)(alt_u32), alt_u32 thread_id,  threadS
 
 // This is the scheduler. It works with Injection.S to switch between threads
 alt_u64 mythread_scheduler(alt_u64 param_list){ // context pointer
+
 	char strBuff[160];
 
 	TCB *thisThread = NULL;
@@ -61,8 +62,8 @@ alt_u64 mythread_scheduler(alt_u64 param_list){ // context pointer
 	if(nThreadsReady > 0){
 		thisThread = DequeueThread(threads, RUNNING);
 
-		if(thisThread->scheduling_status == DONE){
-			EnqueueThread(threads, DONE, thisThread); //Should be set by thread cleanup
+		if(thisThread->scheduling_status == DONE || thisThread->scheduling_status == WAITING){
+			EnqueueThread(threads, thisThread->scheduling_status , thisThread); //Should be set by thread cleanup
 			nextThread = DequeueThread(threads, READY);
 
 		}else{
@@ -86,7 +87,6 @@ alt_u64 mythread_scheduler(alt_u64 param_list){ // context pointer
 		returnValue = param_list;
 	}
 
-	//ENABLE_INTERRUPTS
 	strcat(strBuff,"\n");
 	printf(strBuff);
 	return returnValue;
@@ -112,7 +112,9 @@ void mythread_join(alt_u32 joiningThreadID){
 
 	if (joiningThread != NULL && joiningThread->scheduling_status != DONE){
 		joiningThread->blocking_id = runningThread->thread_id;
+		//joiningThread = PullThreadFromQueue(threads, READY, joiningThread->thread_id);
 		runningThread->scheduling_status = WAITING;
+
 		printf("Joined %lu\n", joiningThreadID);
 	}
 	ENABLE_INTERRUPTS
