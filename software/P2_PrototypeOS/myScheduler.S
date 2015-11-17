@@ -5,7 +5,6 @@
 	beq		r2, r0, false_flag
 
 	/* Disable Interrupts */
-	/* Disable Interrupts */
 	wrctl 	status, zero
 	mov		r4, sp  //Pass stack pointer to mythread_scheduler
 	mov		r5, fp  //Pass frame pointer to mythread_scheduler
@@ -19,8 +18,8 @@
 	/* Set the new frame pointer */
 	call	reset_timer_flag
 	/* Enable interrupts */
-	movi et, 1
-	wrctl status, et
+	//movi et, 1
+	//wrctl status, et
 
 	false_flag:
 

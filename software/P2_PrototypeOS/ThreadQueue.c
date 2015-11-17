@@ -102,20 +102,20 @@ TCB * PullThreadFromQueue(ThreadQueue *tq, threadStatus status, int thread_id){
 
 			if(bIsFirstNode && bHasAChild) {
 				q->firstNode = q->firstNode->childNode;
-				//free(q->firstNode->parentNode);
+				free(q->firstNode->parentNode);
 				q->firstNode->parentNode = NULL;
 				q->count = q->count -1;
 			}
 			else if(bIsLastNode && bHasAParent) {
 				q->lastNode = q->lastNode->parentNode;
-				//free(q->lastNode->childNode);
+				free(q->lastNode->childNode);
 				q->lastNode->childNode = NULL;
 				q->count = q->count -1;
 			}
 			else if(bHasAParent && bHasAChild){
 				node->parentNode->childNode = node->childNode;
 				node->childNode->parentNode = node->parentNode;
-				//free(node);
+				free(node);
 				node=NULL;
 			}
 			else{

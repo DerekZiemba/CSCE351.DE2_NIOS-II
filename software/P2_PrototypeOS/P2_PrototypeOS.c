@@ -34,7 +34,6 @@ alt_u64 mythread_scheduler(alt_u64 param_list){ // context pointer
 
 	TCB *thisThread = NULL;
 	TCB *nextThread = NULL;
-	TCB *waitingThread = NULL;//Thread from waiting list is placed in here, if it is not blocked by thisThread, it will then become the nextThread.
 
 	alt_u32 * param_ptr = 	&param_list;
 	alt_u32 stackpointer =  *param_ptr; //Returns in register r4
@@ -45,54 +44,34 @@ alt_u64 mythread_scheduler(alt_u64 param_list){ // context pointer
 
 	alt_u16 nThreadsRunning = ThreadCount(threads,RUNNING);
 	alt_u16 nThreadsReady = ThreadCount(threads, READY);
-	alt_u16 nThreadsWaiting = ThreadCount(threads, WAITING);
+	alt_u16 nThreadsWaiting = ThreadCount(threads,WAITING);
 	alt_u16 nThreadsDone = ThreadCount(threads, DONE);
 
+	if(nThreadsRunning == 0){
+		thisThread = malloc(sizeof(TCB));
+		thisThread->thread_id = MAIN_THREAD_ID;
+		thisThread->scheduling_status = RUNNING;
+		thisThread->sp = stackpointer;
+		thisThread->fp = framepointer;
+		EnqueueThread(threads, thisThread->scheduling_status, thisThread);
+		nThreadsRunning = ThreadCount(threads,RUNNING);
+	}
 
 	sprintf(strBuff, "RunningThreads=%d | ReadyThreads=%d | WaitingThreads=%d | DoneThreads=%d", nThreadsRunning, nThreadsReady, nThreadsWaiting, nThreadsDone);
-	if(nThreadsRunning > 0 || nThreadsReady > 0 || nThreadsWaiting > 0){
+	if(nThreadsReady > 0){
+		thisThread = DequeueThread(threads, RUNNING);
 
-		/*Create a main thread or dequeue the current running one. */
-		if(nThreadsRunning == 0){
+		if(thisThread->scheduling_status == DONE){
+			EnqueueThread(threads, DONE, thisThread); //Should be set by thread cleanup
+			nextThread = DequeueThread(threads, READY);
 
-			thisThread = DequeueThread(threads, nThreadsReady > 0 ? READY : WAITING);
+		}else{
 			thisThread->sp = stackpointer;
 			thisThread->fp = framepointer;
-			nextThread = thisThread;
-
-		} else if(nThreadsRunning > 0) {
-			thisThread = DequeueThread(threads, RUNNING);
-			if(thisThread->scheduling_status == RUNNING ){
-				thisThread->scheduling_status = READY;
-			}
-			thisThread->sp = &stackpointer;
-			thisThread->fp = &framepointer;
+			thisThread->scheduling_status = READY;
 			EnqueueThread(threads, thisThread->scheduling_status, thisThread);
 
-			if (nThreadsReady>0){
-				nextThread = DequeueThread(threads, READY);
-			} else if (nThreadsWaiting > 0){
-				int count = 1;
-				waitingThread = DequeueThread(threads, WAITING);
-				//Iterate through the waiting queue to find one that is not blocked on this thread.
-				while(waitingThread->blocking_id == thisThread->thread_id){
-					if(count > nThreadsWaiting){//In this case all the waiting threads are waiting for thisThread
-						waitingThread = DequeueThread(threads, thisThread->scheduling_status);
-					}
-					else {//If this ones blocked add it to the end of the queue and dequeue the next
-						EnqueueThread(threads, WAITING,waitingThread);
-						waitingThread = DequeueThread(threads, WAITING);
-					}
-					if(count > nThreadsWaiting +1){
-						break;
-					}
-					count++;
-				}
-				nextThread = waitingThread;
-			} else {
-				//Call back out thisThread because there's nothing else to run
-				nextThread = DequeueThread(threads, thisThread->scheduling_status);
-			}
+			nextThread = DequeueThread(threads, READY);
 		}
 
 		nextThread->scheduling_status = RUNNING;
@@ -100,7 +79,7 @@ alt_u64 mythread_scheduler(alt_u64 param_list){ // context pointer
 
 		*(retptr) = nextThread->sp;
 		*(retptr + 1) = nextThread->fp;
-		sprintf(strBuff + strlen(strBuff), " | Queueing ThreadID=%x | Scheduling ThreadID=%lu", thisThread->thread_id, nextThread->thread_id);
+		sprintf(strBuff + strlen(strBuff), " | Queueing ThreadID=%lu | Scheduling ThreadID=%lu", thisThread->thread_id, nextThread->thread_id);
 	}
 	else {
 		sprintf(strBuff + strlen(strBuff), " | No Queued Threads");
@@ -122,32 +101,24 @@ void mythread_join(alt_u32 joiningThreadID){
 	DISABLE_INTERRUPTS
 	// Wait for timer the first time
 	TCB *runningThread = PeekThread(threads,RUNNING);
-	if(runningThread==NULL){
-		//Only enable if the thread is still null.
-		//Else we might peek the thread and have execution jump to the scheduler.
-		//Then the reference we have here would no longer be relevant
-		ENABLE_INTERRUPTS
-	}
 	while (runningThread == NULL){
-		for (i = 0 ; i < MAX; i++);
+		ENABLE_INTERRUPTS
+		for (i = 0 ; i < MAX; i++){asm("nop");asm("nop");};
 		DISABLE_INTERRUPTS
 		runningThread = PeekThread(threads,RUNNING);
-		if(runningThread==NULL){ ENABLE_INTERRUPTS  }
 	}
 
 	TCB *joiningThread = LookupThread(threads, READY, joiningThreadID);
 
 	if (joiningThread != NULL && joiningThread->scheduling_status != DONE){
-		//joiningThread = PullThreadFromQueue(threads,READY, joiningThreadID);
 		joiningThread->blocking_id = runningThread->thread_id;
-		//When the scheduler is called it will see that it is in the wrong queue and move the running thread.
 		runningThread->scheduling_status = WAITING;
-		alt_printf("Joined (%x)\n", joiningThreadID);
+		printf("Joined %lu\n", joiningThreadID);
 	}
 	ENABLE_INTERRUPTS
 	// Wait for timer
 	while (runningThread->scheduling_status == WAITING){
-		for (i = 0 ; i < MAX*2; i++);
+		for (i = 0 ; i < MAX; i++){asm("nop");asm("nop");};
 	}
 }
 
@@ -171,12 +142,7 @@ void mythread_cleanup(){
 
 	free(running_thread->context);
 	running_thread->scheduling_status = DONE;
-//	TCB *tcb =Thread_Unqueue(RUNNING);
-//	free(tcb->context);
-//	tcb->scheduling_status = DONE;
-//	Thread_Queue(DONE,tcb);
 	ENABLE_INTERRUPTS
-
 	while(TRUE);
 }
 
@@ -195,7 +161,7 @@ void prototype_os(void) {
 
 	for (i = 0; i < NUM_THREADS; i++){
 		EnqueueThread(threads, READY,  mythread_create(&mythread, i, READY, STACK_SIZE));
-		printf("Finished creation (%d): sp: 0x%x\n", i, PeekThread(threads, READY)->context);
+		printf("Finished creation (%lu): sp: 0x%x\n", i, PeekThread(threads, READY)->context);
 	}
 
 	for (i = 0; i < NUM_THREADS; i++){
@@ -205,14 +171,7 @@ void prototype_os(void) {
 
 	while (true) {
 		alt_printf("This is the prototype os for my exciting CSE351 course projects!\n");
-
-		//Here: think about what MAX is used for. Pick up an appropriate value for it experimentally.
-		for (j = 0; j < 150000; j++) {
-			iterations++;
-			//With 110633 as the Max and no nop's, the interrupt interrupts right in the middle of printing the above sentence.
-			asm("nop"); //One nop reduces collisions
-			asm("nop");  //further reduces collisions.
-		}
+		for (j = 0; j < 150000; j++) { asm("nop");asm("nop"); iterations++;}
 	}
 }
 
@@ -230,7 +189,7 @@ void mythread(alt_u32 thread_id){
 	int i, j, n;
 	n = (thread_id % 2 == 0)? 10: 15;
 	for (i = 0; i < n; i++){
-		printf("This is message %d of thread #%d.\n", i, thread_id);
+		printf("This is message %d of thread #%lu.\n", i, thread_id);
 		for (j = 0; j < MAX; j++);
 	}
 }

@@ -6,12 +6,12 @@
 #include "sys/alt_stdio.h"
 #include "alt_types.h"
 
-#define MAX 125000
-#define QUANTUM_LENGTH 2000
+#define MAX 75000
+#define QUANTUM_LENGTH 700
 #define NUM_THREADS 12
 #define MAIN_THREAD_ID 31337
 #define NULL_THREAD_ID -1
-#define STACK_SIZE 8192//16384
+#define STACK_SIZE 4096//16384
 
 
 
@@ -41,7 +41,7 @@ typedef enum threadStatus {  READY = 0, RUNNING = 1,  WAITING = 2,  DONE = 3} th
 typedef struct ThreadControlBlock {
 	alt_u32 thread_id;
 	threadStatus scheduling_status;
-	void *context;
+	alt_u32 *context;
 	alt_u32 *sp;
 	alt_u32 *fp;
 	alt_u32 blocking_id;

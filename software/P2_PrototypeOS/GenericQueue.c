@@ -88,12 +88,12 @@ TCB* Queue_Dequeue(Queue *q) {
 
 		//Freeing breaks things?  Works fine in Visual Studio Test program
 		if (q->count > 0) {
-			//free(q->firstNode->parentNode);
+			free(q->firstNode->parentNode);
 			q->firstNode->parentNode = NULL;
 		}
 		else if (q->count == 0) {
-			//free(q->firstNode);
-			//free(q->lastNode);
+			free(q->firstNode);
+			free(q->lastNode);
 			q->firstNode = NULL;
 			q->lastNode = NULL;
 			oldLeadingNode = NULL;
