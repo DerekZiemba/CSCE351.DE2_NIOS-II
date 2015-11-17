@@ -5,7 +5,7 @@
 ***********************************************************************/
 /* Note: Made it a variable so I can change it in the debugger.  */
 static alt_alarm alarm;
-static ThreadQueue threads;
+static ThreadQueue *threads;
 
 
 // Creates a thread and adds it to the ready queue
@@ -14,15 +14,11 @@ TCB *mythread_create(void (*start_routine)(alt_u32), alt_u32 thread_id,  threadS
 	tcb->thread_id = thread_id;
 	tcb->blocking_id = -1;
 	tcb->scheduling_status = status;
-	tcb->context = malloc(4096);
-	tcb->fp = tcb->context + 4096/4;
-	tcb->sp = tcb->context + 128/4;
-
-	register int sp asm ("sp");
-	//printf("%x", sp);
+	tcb->context = malloc(8192);
+	tcb->fp = tcb->context + 8192/4;//8kb stack
+	tcb->sp = tcb->context + 80/4;
 
 	int one = 1;
-
 	//Gap for muldiv handler
 	//memcpy(tcb->sp + 8/4,  xxxx, 4);//r1
 	//memcpy(tcb->sp + 12/4, xxxx, 4);//r2
@@ -30,16 +26,14 @@ TCB *mythread_create(void (*start_routine)(alt_u32), alt_u32 thread_id,  threadS
 	memcpy(tcb->sp + 20/4, &thread_id, 4);//r4 Argument one, is thread_id
 	//memcpy(tcb->sp + 24/4, &one, 4);//r5 /estatus?
 	//memcpy(tcb->sp + 28/4, xxxx, 4);//r6
-	//memcpy(tcb->sp + 32/4, xxxx, 4);//r7
-	//memcpy(tcb->sp + 32/4, xxxx, 4);//r8
 
-
-	memcpy(tcb->sp + 68/4, &one, 4);//r5 /estatus?
+	//Location 68 gets loaded into r5 then into estatus.  Store the number one into the lowest byte
+	memcpy(tcb->sp + 68/4, &one, 4);
 	memcpy(tcb->sp + 72/4, &start_routine, 4);//ea  Becomes program counter/Instruction that caused the exception
 	memcpy(tcb->sp + 0, &mythread_cleanup, 4); //ra Will return here after executing start_routine
 
 	//I think th eproblem is right here.
-	//memcpy(tcb->sp + 128/4, &tcb->fp, 4);//fp
+	memcpy(tcb->sp + 80/4, &tcb->fp, 4);//Not sure where to place the frame pointer on the stack
 
 	alt_printf("Finished creation (%x): sp: (%x)\n", thread_id, tcb->context);
 	return tcb;
@@ -89,19 +83,16 @@ alt_u64 mythread_scheduler(alt_u64 param_list){ // context pointer
 			}
 			thisThread->sp = &stackpointer;
 			thisThread->fp = &framepointer;
+			EnqueueThread(threads, thisThread->scheduling_status, thisThread);
 
 			if (nThreadsReady>0){
-				EnqueueThread(threads, thisThread->scheduling_status, thisThread);
 				nextThread = DequeueThread(threads, READY);
 			} else if (nThreadsWaiting > 0){
-				EnqueueThread(threads, thisThread->scheduling_status, thisThread);
 				nextThread = DequeueThread(threads, WAITING);
 			} else {
-				nextThread = thisThread;
+				//Call back out thisThread because there's nothing else to run
+				nextThread = DequeueThread(threads, thisThread->scheduling_status);
 			}
-
-			//nextThread->sp = stackpointer;
-			//nextThread->fp = framepointer;
 		}
 
 		nextThread->scheduling_status = RUNNING;
@@ -109,7 +100,7 @@ alt_u64 mythread_scheduler(alt_u64 param_list){ // context pointer
 
 		*(retptr) = nextThread->sp;
 		*(retptr + 1) = nextThread->fp;
-		sprintf(str + strlen(str), " | Queueing ThreadID=%lu | Scheduling ThreadID=%lu", thisThread->thread_id, nextThread->thread_id);
+		sprintf(str + strlen(str), " | Queueing ThreadID=%x | Scheduling ThreadID=%lu", thisThread->thread_id, nextThread->thread_id);
 	}
 	else {
 		sprintf(str + strlen(str), " | No Queued Threads");
@@ -125,36 +116,39 @@ alt_u64 mythread_scheduler(alt_u64 param_list){ // context pointer
 
 
 // Joins the thread with the calling thread
-void mythread_join(alt_u32 thread_id){
+void mythread_join(alt_u32 joiningThreadID){
 	int i=0;
 
 	DISABLE_INTERRUPTS
 	// Wait for timer the first time
-	TCB *running_thread = PeekThread(threads,RUNNING);
-	ENABLE_INTERRUPTS
-	while (running_thread == NULL){
-		for (i = 0 ; i < MAX; i++);
-		DISABLE_INTERRUPTS
-		running_thread = PeekThread(threads,RUNNING);
+	TCB *runningThread = PeekThread(threads,RUNNING);
+	if(runningThread==NULL){
+		//Only enable if the thread is still null.
+		//Else we might peek the thread and have execution jump to the scheduler.
+		//Then the reference we have here would no longer be relevant
 		ENABLE_INTERRUPTS
 	}
+	while (runningThread == NULL){
+		for (i = 0 ; i < MAX; i++);
+		DISABLE_INTERRUPTS
+		runningThread = PeekThread(threads,RUNNING);
+		if(runningThread==NULL){ ENABLE_INTERRUPTS  }
+	}
 
-	int calling_id = running_thread->thread_id;
-	alt_printf("Joining Thread(%x).\n", calling_id);
+	TCB *joiningThread = LookupThread(threads, READY, joiningThreadID);
 
-	DISABLE_INTERRUPTS
-	TCB *tcb = LookupThread(threads, READY, thread_id);
-	if (tcb != NULL && tcb->scheduling_status != DONE){
-		//NOTE: SHOULD Push this onto WAITING STACK
-		tcb->blocking_id = calling_id;
-		running_thread->scheduling_status = WAITING;
-		alt_printf("Joined (%x)\n", thread_id);
+	if (joiningThread != NULL && joiningThread->scheduling_status != DONE){
+		//joiningThread = PullThreadFromQueue(threads,READY, joiningThreadID);
+		joiningThread->blocking_id = runningThread->thread_id;
+		//When the scheduler is called it will see that it is in the wrong queue and move the running thread.
+		runningThread->scheduling_status = WAITING;
+		alt_printf("Joined (%x)\n", joiningThreadID);
 	}
 	ENABLE_INTERRUPTS
 	// Wait for timer
-	while (running_thread->scheduling_status == WAITING){
-		for (i = 0 ; i < MAX; i++);
-	}
+//	while (runningThread->scheduling_status == WAITING){
+//		for (i = 0 ; i < MAX; i++);
+//	}
 }
 
 // Threads return here and space is freed
@@ -173,10 +167,8 @@ void mythread_cleanup(){
 			EnqueueThread(threads, READY, blockedTCB);
 		}
 	}
-	ENABLE_INTERRUPTS
 	alt_printf("COMPLETED.\n");
 
-	DISABLE_INTERRUPTS
 	free(running_thread->context);
 	running_thread->scheduling_status = DONE;
 //	TCB *tcb =Thread_Unqueue(RUNNING);
@@ -197,9 +189,6 @@ void prototype_os(void) {
 	printf("Started.%lu\n", ALARMTICKS(QUANTUM_LENGTH));
 	alt_u32 i, j, iterations = 0;
 
-	// Here: initialize the timer and its interrupt handler
-	alt_alarm_start(&alarm, ALARMTICKS(QUANTUM_LENGTH), myinterrupt_handler, (void*)(&iterations));
-
 	threads = ThreadQueue_init();
 
 	for (i = 0; i < NUM_THREADS; i++){
@@ -207,6 +196,9 @@ void prototype_os(void) {
 		TCB *tcb = mythread_create(&mythread, i, READY);
 		EnqueueThread(threads, READY, tcb);
 	}
+
+	// Here: initialize the timer and its interrupt handler
+	alt_alarm_start(&alarm, ALARMTICKS(QUANTUM_LENGTH), myinterrupt_handler, (void*)(&iterations));
 
 
 	for (i = 0; i < NUM_THREADS; i++){

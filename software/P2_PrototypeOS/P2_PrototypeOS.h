@@ -29,7 +29,6 @@ typedef enum bool { false = FALSE, true  = TRUE} bool;
 /* The resolution is 100ms but it accepts input in single millis */
 #define ALARMTICKS(x) ((alt_ticks_per_second()*x)/1000)
 
-
 /***********************************************************************
 * Thread Structures
 ***********************************************************************/
