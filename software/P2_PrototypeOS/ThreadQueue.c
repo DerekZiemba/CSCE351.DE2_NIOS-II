@@ -14,7 +14,7 @@
 //}
 
 ThreadQueue* ThreadQueue_init() {
-	ThreadQueue *tq = calloc(1, sizeof(ThreadQueue));
+	ThreadQueue *tq = malloc(sizeof(ThreadQueue));
 	alt_u32 i = 0;
 	for(i=0; i<numberOfThreadStatuses; i++){
 		tq->threadQueues[i] = Queue_init(0);//Init to unlimited size queues

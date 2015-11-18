@@ -10,7 +10,7 @@
 ****************************************************************************/
 //node_t *Node_init(void *data) {
 node_t *Node_init(TCB *data) {
-	node_t  *elem = calloc(1, sizeof(node_t));
+	node_t  *elem = malloc(sizeof(node_t));
 	elem->data = data;
 	elem->parentNode = NULL;
 	elem->childNode = NULL;

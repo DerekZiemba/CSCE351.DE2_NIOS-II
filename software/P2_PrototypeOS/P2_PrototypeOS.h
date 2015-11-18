@@ -6,13 +6,16 @@
 #include "sys/alt_stdio.h"
 #include "alt_types.h"
 
-#define MAX 75000
-#define QUANTUM_LENGTH 700
+#define MAX 20000
+#define MAIN_DELAY 15000
+#define THREAD_DELAY 100
+#define QUANTUM_LENGTH 500
 #define NUM_THREADS 12
 #define MAIN_THREAD_ID 31337
 #define NULL_THREAD_ID -1
-#define STACK_SIZE 4096//16384
+#define STACK_SIZE 8096//16384
 
+#define SHOW_THREAD_STATS 1
 
 
 /***************************************************************************
