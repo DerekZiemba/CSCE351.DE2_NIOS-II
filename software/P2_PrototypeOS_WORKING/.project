@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>P2_PrototypeOS</name>
+	<name>P2_PrototypeOS_WORKING</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -41,7 +41,7 @@
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.buildLocation</key>
-					<value>${workspace_loc:/P2_PrototypeOS/Nios II}</value>
+					<value>${workspace_loc://P2_PrototypeOS_WORKING}</value>
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.cleanBuildTarget</key>

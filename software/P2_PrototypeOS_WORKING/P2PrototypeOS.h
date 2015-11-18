@@ -1,3 +1,13 @@
+/*
+ * P2PrototypeOS.h
+ *
+ *  Created on: Nov 17, 2015
+ *      Author: Derek
+ */
+
+#ifndef P2PROTOTYPEOS_H_
+#define P2PROTOTYPEOS_H_
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -139,3 +149,4 @@ void reset_timer_flag();
 
 
 
+#endif /* P2PROTOTYPEOS_H_ */

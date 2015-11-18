@@ -129,22 +129,22 @@ BUILD_CONFIGS := default
 
 # This following VERSION comment indicates the version of the tool used to 
 # generate this makefile. A makefile variable is provided for VERSION as well. 
-# ACDS_VERSION: 12.0sp2
-ACDS_VERSION := 12.0sp2
+# ACDS_VERSION: 13.0sp1
+ACDS_VERSION := 13.0sp1
 
 # This following BUILD_NUMBER comment indicates the build number of the tool 
 # used to generate this makefile. 
-# BUILD_NUMBER: 263
+# BUILD_NUMBER: 232
 
 # Define path to the application ELF. 
 # It may be used by the makefile fragments so is defined before including them. 
 # 
-ELF := P2_PrototypeOS.elf
+ELF := P2_PrototypeOS_WORKING.elf
 
 # Paths to C, C++, and assembly source files.
-C_SRCS := P2_PrototypeOS.c LinkedList.c
+C_SRCS := P2PrototypeOS.c LinkedList.c
 CXX_SRCS :=
-ASM_SRCS :=
+ASM_SRCS := myScheduler.S
 
 
 # Path to root of object file tree.
@@ -177,7 +177,7 @@ CRT0 :=
 SYS_LIB :=
 
 # Define path to the root of the BSP.
-BSP_ROOT_DIR := ../P1_PrototypeOS_bsp/
+BSP_ROOT_DIR := ../P2_PrototypeOS_WORKING_bsp/
 
 # List of application specific include directories, library directories and library names
 APP_INCLUDE_DIRS :=
@@ -1012,7 +1012,7 @@ ifeq ($(QSYS),1)
 IP_MAKE_SIMSCRIPT := ip-make-simscript
 
 ifeq ($(VSIM),)
-VSIM_EXE := $(if $(VSIM_DIR),$(VSIM_DIR)/,)vsim
+VSIM_EXE := "$(if $(VSIM_DIR),$(VSIM_DIR)/,)vsim"
 ifeq ($(ENABLE_VSIM_GUI),1)
 VSIM := $(VSIM_EXE) -gui
 else
@@ -1071,7 +1071,7 @@ ifneq ($(DISABLE_ELFPATCH),1)
 	$(ELFPATCH) $@ $(ELF_PATCH_FLAG)
 endif
 ifneq ($(DISABLE_STACKREPORT),1)
-	@$(STACKREPORT) $@
+	@bash -c "$(STACKREPORT) $@"
 endif
 
 $(OBJDUMP_NAME) : $(ELF)
