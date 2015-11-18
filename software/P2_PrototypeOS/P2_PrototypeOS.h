@@ -6,16 +6,18 @@
 #include "sys/alt_stdio.h"
 #include "alt_types.h"
 
-#define MAX 20000
-#define MAIN_DELAY 15000
-#define THREAD_DELAY 100
+#define RELATIVE_SPEED_MULTIPLIER 10
+#define MAX 3000 * RELATIVE_SPEED_MULTIPLIER
+#define MAIN_DELAY 15000 * RELATIVE_SPEED_MULTIPLIER
+#define THREAD_DELAY 10 * RELATIVE_SPEED_MULTIPLIER
 #define QUANTUM_LENGTH 500
 #define NUM_THREADS 12
-#define MAIN_THREAD_ID 31337
+#define MAIN_THREAD_ID 1337
 #define NULL_THREAD_ID -1
-#define STACK_SIZE 8096//16384
+#define STACK_SIZE 16384//16384
 
 #define SHOW_THREAD_STATS 1
+#define SHOW_ITERRUPT_STATS 1
 
 
 /***************************************************************************
@@ -48,7 +50,9 @@ typedef struct ThreadControlBlock {
 	alt_u32 *sp;
 	alt_u32 *fp;
 	alt_u32 blocking_id;
-
+	alt_u32 totalTicks;
+	alt_u32 lastStartTicks;
+	alt_u32 startTicks;
 } TCB;
 
 //TCB *ThreadControlBlock_create(void (*start_routine)(int), int thread_id);
