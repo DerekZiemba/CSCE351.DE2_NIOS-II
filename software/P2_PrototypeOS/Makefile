@@ -142,7 +142,9 @@ ACDS_VERSION := 12.0sp2
 ELF := P2_PrototypeOS.elf
 
 # Paths to C, C++, and assembly source files.
-C_SRCS := P2_PrototypeOS.c LinkedList.c
+C_SRCS += P2_PrototypeOS.c LinkedList.c
+C_SRCS += LinkedList.c
+C_SRCS += ThreadQueue.c
 CXX_SRCS :=
 ASM_SRCS :=
 
