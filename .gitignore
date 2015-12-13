@@ -1,58 +1,89 @@
-# Windows image file caches
+# =========================
+# Misc File Ignores
+# =========================
+*.7z
+*.zip
+*.dropbox
+*.pdf
+*.log
+*.xml
+*.html
+
+# =========================
+# Example Projects
+# =========================
+oskernelsproject-master/
+oskernelsproject-P2_Final_Version/
+oskernelsproject-P3/
+Project1/
+Project2/
+
+# =========================
+# Eclipse Ignores
+# =========================
+.settings/
+.metadata/
+*.cproject
+*.force_relink
+*.project
+*create-this*
+*Makefile*
+**/obj
+*.elf
+*.mk
+
+
+*.objdump
+*.map
+
+
+# =========================
+# NIOS 2 Ignores
+# =========================
+**/*_bsp/
+*transcript*
+*nios_system_generation_script*
+
+
+
+# =========================
+# Quartus Ignores
+# =========================
+*.cdf
+*.done
+*.hex
+*.jdi
+*.mif
+*.pin
+*.ppf
+*.ptf
+*.ptf.*
+*_ptf
+*.qdf
+*.qip
+*.qsf
+*.qws
+*.rpt
+*.sdc
+*.smsg
+*.summary
+*.tcl
+*.v
+*_log*
+
+
+# =========================
+# Windows Ignores
+# =========================
 Thumbs.db
 ehthumbs.db
-
-# Folder config file
 Desktop.ini
-
-# Recycle Bin used on file shares
 $RECYCLE.BIN/
-
-# Windows Installer files
 *.cab
 *.msi
 *.msm
 *.msp
-
-# Windows shortcuts
 *.lnk
-
-# =========================
-# Operating System Files
-# =========================
-
-# OSX
-# =========================
-
+*.tmp
 .DS_Store
-.AppleDouble
-.LSOverride
 
-# Thumbnails
-._*
-
-# Files that might appear on external disk
-.Spotlight-V100
-.Trashes
-
-# Directories potentially created on remote AFP share
-.AppleDB
-.AppleDesktop
-Network Trash Folder
-Temporary Items
-.apdisk
-*.v
-*.cdf
-*.done
-*.objdump
-*.elf
-*.o
-drivers/
-HAL/
-obj/
-*.a
-*.tcl
-*.map
-*.force_relink
-summary.*
-*.summary

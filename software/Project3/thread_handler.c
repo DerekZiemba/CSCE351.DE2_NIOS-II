@@ -1,130 +1,134 @@
-#include <stdio.h>
-#include <assert.h>
-
+#include "prototypeOS.h"
 #include "alarm_handler.h"
 #include "thread_handler.h"
-#include "queue.h"
-
-/* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
-/* The two macros are extremely useful by turnning on/off interrupts when atomicity is required */
-#define DISABLE_INTERRUPTS() {  \
-    asm("wrctl status, zero");  \
-}
-
-#define ENABLE_INTERRUPTS() {   \
-    asm("movi et, 1");          \
-    asm("wrctl status, et");    \
-}
+#include "LinkedList.h"
+#include <sys/alt_alarm.h>
 
 /* the current running thread */
-static tcb *current_running_thread      = NULL;
+static ThreadControlBlock *current_running_thread      = NULL;
+static LinkedList lsReadyThreads = {0,0,NULL,NULL};
+
 
 /* pointing to the stack/context of main() */
-static unsigned int *main_stack_pointer = NULL;
+static uint32_t *main_stack_pointer = NULL;
 
-tcb *mythread_create(unsigned int tid, unsigned int stack_size, void (*mythread)(unsigned int tid))
-{
-    unsigned int *tmp_ptr;
-    
+ThreadControlBlock* GetCurrentRunningThread(){
+	return current_running_thread;
+}
+
+ThreadControlBlock *mythread_CreateEmptyThread(char threadID){
+	ThreadControlBlock *thread	= malloc(sizeof(ThreadControlBlock));
+	CHECKMALLOC(thread, "ThreadControlBlock");
+	thread->threadID = threadID;
+	thread->state = DUMMY;
+	thread->ParentThread = NULL;
+	thread->lsChildThreads = LinkedList_CreateNew(0);
+	thread->stack = NULL;
+	thread->sp = NULL;
+	return thread;
+}
+ThreadControlBlock *mythread_create(char threadID, uint32_t stack_size, void (*funcptr)(char threadID)){
     /* allocate a tcb for a thread */
-    tcb *thread_pointer;
-    
-    thread_pointer                      = (tcb *)malloc(sizeof(tcb));
-    if (thread_pointer == NULL)
-    {
-        printf("Unable to allocate space!\n");
-        exit(1);
-    }
-    
-    /* initialize the thread's tcb */
-    thread_pointer->tid                 = tid;
-    thread_pointer->stack               = (unsigned int *)malloc(sizeof(unsigned int) * stack_size);
-    if (thread_pointer->stack == NULL)
-    {
-        printf("Unable to allocate space!\n");
-        exit(1);
-    }
-    thread_pointer->stack_size          = stack_size;
-    thread_pointer->stack_pointer       = (unsigned int *)(thread_pointer->stack + stack_size - 19);
-    thread_pointer->state               = NEW;
-    
+    ThreadControlBlock *thread	= mythread_CreateEmptyThread(threadID);
+    thread->state    = NEW;
+
+    thread->stack = malloc(sizeof(uint32_t) * stack_size);
+    CHECKMALLOC(thread->stack, "thread->stack");
+
+    thread->sp       = (uint32_t *)(thread->stack + stack_size - 19);
+
     /* initialize the thread's stack */
-    tmp_ptr                             = thread_pointer->stack_pointer;
-    tmp_ptr[18]                         = (unsigned int)mythread;                               // ea
-    tmp_ptr[17]                         = 1;                                                    // estatus
-    tmp_ptr[5]                          = tid;                                                  // r4
-    tmp_ptr[0]                          = (unsigned int)mythread_cleanup;                       // ra
-    tmp_ptr[-1]                         = (unsigned int)(thread_pointer->stack + stack_size);   // fp
-           
-    return thread_pointer;
+    uint32_t *sp                   = thread->sp;
+    sp[18]                         = (uint32_t)funcptr;                               // ea
+    sp[17]                         = 1;                                                // estatus
+    sp[5]                          = threadID;                                              // r4
+    sp[0]                          = (uint32_t)mythread_cleanup;                       // ra
+    sp[-1]                         = (uint32_t)(thread->stack + stack_size);   		// fp
+
+    //    thread->threadStats = malloc(sizeof(ThreadStats_t));
+    //    thread->threadStats->totalTicks = 0;
+    //    thread->threadStats->lastStartTicks = alt_nticks();
+    //    thread->threadStats->startTicks = alt_nticks();
+    return thread;
 }
 
 /* NEW ----> READY */
-void mythread_start(tcb *thread_pointer)
-{
-    // assert(thread_pointer && thread_pointer->state == NEW);
+void mythread_start(ThreadControlBlock *thread_pointer){
     thread_pointer->state = READY;
 }
 
 /* READY --push into--> readyQ */
-void mythread_join(tcb *thread_pointer)
-{
-    // assert(thread_pointer && thread_pointer->state == READY);
-    enqueue((void *)thread_pointer);
+void mythread_join(ThreadControlBlock *parent, ThreadControlBlock *readyThread){
+	DISABLE_INTERRUPTS();
+    CheckForError(readyThread && readyThread->state == READY,"\nNot Ready To Join\n");
+
+    Enqueue(&lsReadyThreads, (void *)readyThread);
+    register void* sp asm ("sp");
+
+    if(readyThread->ParentThread != NULL){
+    	LinkedList* ls = readyThread->ParentThread->lsChildThreads;
+
+    }
+    readyThread->ParentThread = parent;
+    Enqueue(parent->lsChildThreads, (void*) readyThread);
+
+    ENABLE_INTERRUPTS();
 }
 
 /* RUNNING ----> BLOCKED */
-void mythread_block(tcb *thread_pointer)
-{
-    // assert(thread_pointer && thread_pointer->state == RUNNING);
+void mythread_block(ThreadControlBlock *thread_pointer){
+    CheckForError(thread_pointer && thread_pointer->state == RUNNING,"\nThread Not Running\n");
     thread_pointer->state = BLOCKED;
 }
 
 /* RUNNING ----> TERMINATED */
-void mythread_terminate(tcb *thread_pointer)
-{
-    // assert(thread_pointer && thread_pointer->state == RUNNING);
+void mythread_terminate(ThreadControlBlock *thread_pointer){
+    CheckForError(thread_pointer && thread_pointer->state == RUNNING,"\nThread Not Running\n");
     thread_pointer->state = TERMINATED;
 }
 
-void *mythread_schedule(void *context)
-{
-    if (getQsize() > 0)
-    {
-        if (current_running_thread != NULL)
-        {
-            // assert(current_running_thread->state == RUNNING);
-            // assert(main_stack_pointer != NULL);
-            current_running_thread->state = READY;
-            current_running_thread->stack_pointer = (unsigned int *)context;
-            enqueue(current_running_thread);
+void *mythread_schedule(void *context){
+
+
+    if (lsReadyThreads.count > 0){
+        if (current_running_thread != NULL){
+            if(current_running_thread->state == RUNNING){
+            	current_running_thread->state = READY;
+            }
+            current_running_thread->sp = (uint32_t *)context;
+            Enqueue(&lsReadyThreads, (void*) current_running_thread);
         }
-        else if (main_stack_pointer == NULL)
-        {
-            main_stack_pointer = (unsigned int *)context;
+        else if (main_stack_pointer == NULL){
+            main_stack_pointer = (uint32_t *)context;
         }
         
-        current_running_thread = (tcb *)dequeue();
-        // assert(current_running_thread->state == READY);
+        current_running_thread = (ThreadControlBlock *)Dequeue(&lsReadyThreads);
+        int allAreBlockedCounter = lsReadyThreads.count;
+        while(current_running_thread->state == BLOCKED){
+        	if (allAreBlockedCounter < 0) {
+        		printf("we have some problems");
+        	}
+        	Enqueue(&lsReadyThreads, (void*) current_running_thread);
+        	current_running_thread = (ThreadControlBlock *)Dequeue(&lsReadyThreads);
+        	allAreBlockedCounter--;
+        }
         current_running_thread->state = RUNNING;
         
-        context = (void *)(current_running_thread->stack_pointer);
+        context = (void *)(current_running_thread->sp);
     }
-    else if (current_running_thread==NULL && main_stack_pointer!=NULL)
-    {        
+    else if (current_running_thread==NULL && main_stack_pointer!=NULL){
         context = (void *)main_stack_pointer;
     }
 
     return context;
 }
 
-unsigned int mythread_isQempty()
-{
-    return (getQsize() == 0) && (current_running_thread == NULL);
+unsigned int mythread_isQempty(){
+    return (lsReadyThreads.count == 0) && (current_running_thread == NULL);
 }
 
-void mythread_cleanup()
-{
+void mythread_cleanup(){
+	printf("Completing thread %c\n", current_running_thread->threadID);
     DISABLE_INTERRUPTS();
     mythread_terminate(current_running_thread);
     free(current_running_thread->stack);

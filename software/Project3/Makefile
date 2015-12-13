@@ -143,9 +143,11 @@ ELF := Project3.elf
 
 # Paths to C, C++, and assembly source files.
 C_SRCS += alarm_handler.c
-C_SRCS += project1.c
 C_SRCS += queue.c
 C_SRCS += thread_handler.c
+C_SRCS += prototypeOS.c
+C_SRCS += LinkedList.c
+C_SRCS += Semaphore.c
 CXX_SRCS :=
 ASM_SRCS := exception_handler.S
 

@@ -13,7 +13,7 @@ node_t *Node_init(TCB *data) {
 /*The queue is technically a linked list without a limit,
 * but I'm limiting it by the size so it can replace ringbuffer and I can test it easier
 * Passing in 0 will make it infinit*/
-Queue *Queue_init(alt_32 maxsize) {
+Queue *Queue_init(uint32_t maxsize) {
 	Queue *q = calloc(1, sizeof(Queue));
 	q->maxsize = maxsize;
 	q->count = 0;
@@ -96,14 +96,14 @@ TCB* Queue_Peek(Queue *q) {
 
 ThreadQueue* ThreadQueue_init() {
 	ThreadQueue *tq = malloc(sizeof(ThreadQueue));
-	alt_u32 i = 0;
+	uint32_t i = 0;
 	for(i=0; i<numberOfThreadStatuses; i++){
 		tq->threadQueues[i] = Queue_init(0);//Init to unlimited size queues
 	}
 	return tq;
 }
 
-alt_u32 ThreadCount(ThreadQueue *tq, threadStatus status){
+uint32_t ThreadCount(ThreadQueue *tq, threadStatus status){
 	return (tq->threadQueues[status])->count;
 }
 
@@ -123,7 +123,7 @@ TCB * PeekThread(ThreadQueue *tq, threadStatus status){
 }
 
 
-TCB * LookupThread(ThreadQueue *tq, threadStatus status, int thread_id){
+TCB * LookupThread(ThreadQueue *tq, threadStatus status, uint32_t thread_id){
 	Queue *q = tq->threadQueues[status];
 	node_t *node = q->firstNode;
 

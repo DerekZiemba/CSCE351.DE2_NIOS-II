@@ -16,3 +16,4 @@
 *.exe
 *.out
 *.app
+/create-this-app

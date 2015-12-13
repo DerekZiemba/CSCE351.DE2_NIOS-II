@@ -6,14 +6,14 @@
 /* Note: Made it a variable so I can change it in the debugger.  */
 static alt_alarm alarm;
 static ThreadQueue *threads;
-static volatile alt_u32 g_tickCounter;
+static volatile uint32_t g_tickCounter;
 
 #if SHOW_THREAD_STATS == 1
 static volatile char strBuff[160]; //I'd rather not use stack space.
 #endif
 
 /*NOTE:  Interrupts are enabled/disabled in the assembly that calls this function*/
-TCB *mythread_create(void (*start_routine)(alt_u32), alt_u32 thread_id,  threadStatus status, int stacksizeBytes) {
+TCB *mythread_create(void (*start_routine)(uint32_t), uint32_t thread_id,  threadStatus status, int stacksizeBytes) {
 	TCB *tcb = malloc(sizeof(TCB));
 	tcb->thread_id = thread_id;
 	tcb->blocking_id = -1;
@@ -39,22 +39,22 @@ TCB *mythread_create(void (*start_routine)(alt_u32), alt_u32 thread_id,  threadS
 
 static int counter = 0;
 
-alt_u64 mythread_scheduler(alt_u64 param_list){ // context pointer
+uint64_t mythread_scheduler(uint64_t param_list){ // context pointer
 
 	TCB *thisThread = NULL;
 	TCB *nextThread = NULL;
 
-	alt_u32 * param_ptr = 	&param_list;
-	alt_u32 stackpointer =  *param_ptr; //Returns in register r4
-	alt_u32 framepointer =  *(param_ptr+1); //Returns in register r5
+	uint32_t * param_ptr = 	&param_list;
+	uint32_t stackpointer =  *param_ptr; //Returns in register r4
+	uint32_t framepointer =  *(param_ptr+1); //Returns in register r5
 
-	alt_u64 returnValue;
-	alt_u32 * retptr = &returnValue;
+	uint64_t returnValue;
+	uint32_t * retptr = &returnValue;
 
-	alt_u16 nThreadsRunning = ThreadCount(threads, RUNNING);
-	alt_u16 nThreadsReady = ThreadCount(threads, READY);
-	alt_u16 nThreadsWaiting = ThreadCount(threads,WAITING);
-	alt_u16 nThreadsDone = ThreadCount(threads, DONE);
+	uint32_t nThreadsRunning = ThreadCount(threads, RUNNING);
+	uint32_t nThreadsReady = ThreadCount(threads, READY);
+	uint32_t nThreadsWaiting = ThreadCount(threads,WAITING);
+	uint32_t nThreadsDone = ThreadCount(threads, DONE);
 
 #if SHOW_THREAD_STATS == 1
 	memset(strBuff, 0, sizeof(strBuff));
