@@ -1,35 +1,40 @@
-/* 
-    Name:   thread_handler.h
-    Author: Dongyuan Zhan
-    Date:   11/20/2010
-
-Description:
-    Functions used to manage threads
-*/
+#include <stdint.h>
 
 /* possible thread states */
-enum tstate {NEW, READY, RUNNING, BLOCKED, TERMINATED, NUM_TSTATES};
+enum tstate {NEW, READY, RUNNING, BLOCKED, TERMINATED, DUMMY, NUM_TSTATES};
+
+//typedef struct {
+//	uint32_t totalTicks;
+//	uint32_t startTicks;
+//	uint32_t lastStartTicks;
+//} ThreadStats_t;
+
 
 /* thread control block */
-typedef struct
-{
-    unsigned int tid;
-    unsigned int *stack;
-    unsigned int stack_size;
-    unsigned int *stack_pointer;
+typedef struct ThreadControlBlock {
+    char threadID;
     enum tstate  state;
-} tcb;
+    struct ThreadControlBlock*  ParentThread;
+    struct LinkedList *lsChildThreads;
+    uint32_t *stack;
+    uint32_t *sp;
+    //    ThreadStats_t* threadStats;
+} ThreadControlBlock;
 
 /* declaration */
-tcb *mythread_create(unsigned int tid, unsigned int stack_size, void (*mythread)(unsigned int tid));
+ThreadControlBlock *mythread_CreateEmptyThread(char threadID);
 
-void mythread_start(tcb *thread_pointer);
+ThreadControlBlock *mythread_create(char threadID, uint32_t stack_size, void (*mythread)(char threadID));
 
-void mythread_join(tcb *thread_pointer);
+ThreadControlBlock* GetCurrentRunningThread();
 
-void mythread_block(tcb *thread_pointer);
+void mythread_start(ThreadControlBlock *thread_pointer);
 
-void mythread_terminate(tcb *thread_pointer);
+void mythread_join(ThreadControlBlock *parent, ThreadControlBlock *thread_pointer);
+
+void mythread_block(ThreadControlBlock *thread_pointer);
+
+void mythread_terminate(ThreadControlBlock *thread_pointer);
 
 void *mythread_schedule(void *context);
 

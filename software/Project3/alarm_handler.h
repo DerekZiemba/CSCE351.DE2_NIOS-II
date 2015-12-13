@@ -6,13 +6,12 @@
 Description:
     Functions used to handle things related to alarm interrupts
 */
+#include <stdint.h>
 
-#include <alt_types.h>
-
-unsigned int is_alarmflag_set();
+uint32_t is_alarmflag_set();
 
 void reset_alarmflag();
 
-alt_u32 myinterrupt_handler(void* context);
+uint32_t myinterrupt_handler(void* context);
 
-unsigned int start_alarm_succeed();
+uint32_t start_alarm_succeed(uint32_t millis);
