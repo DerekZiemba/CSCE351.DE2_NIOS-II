@@ -38,6 +38,7 @@ Project1/
 # NIOS 2 Ignores
 # =========================
 **/*_bsp/
+*_bsp/
 *transcript*
 *nios_system_generation_script*
 
