@@ -1,23 +1,18 @@
 /*
  * LinkedList.c
  *
- *  Created on: Dec 14, 2015
+ *  Created on: Dec 10, 2015
  *      Author: Derek
  */
 
+#include "HoneyPot.h"
 
-/*
- * ListType.c
- *
- *  Created on: Dec 14, 2015
- *      Author: Derek
- */
-
-#include "ThreadHandler.h"
-
-#define NodeType 	ThreadQueueNode_t
-#define ElementType ThreadControlBlock
-#define ListType 	ThreadQueue
+/*******************************************************************************************************
+* These are internal macros for the purpose of making code easier to read
+*******************************************************************************************************/
+#define NodeType 	HoneyPotNode_t
+#define ElementType char
+#define ListType 	HoneyPot
 
 #define bIsListUnlimitedSize(ls) (ls->maxsize==0)
 #define bListHasNodes(ls) (ls->count > 0)
@@ -29,7 +24,7 @@
 #define bIsValidGetAtIndex(ls,index) (index >= 0 && index < ls->count)
 
 uint8_t CheckErrorAndPrint(uint8_t bTestPassed, char* msg) {
-	if (!bTestPassed) { printf(msg); };
+	if (!bTestPassed) { printf(msg); }
 	return bTestPassed;
 }
 
@@ -47,10 +42,11 @@ uint8_t VerifyViableGetOperation(ListType* ls, int32_t index) {
 
 
 
+
 /*******************************************************************************************************
 * Node Functions
 *******************************************************************************************************/
-NodeType* CreateNewNode(ElementType* data) {
+NodeType* CreateNewThreadNode(ElementType* data) {
 	NodeType  *n = malloc(sizeof(NodeType));
 	n->data = data;
 	n->childNode = NULL;
@@ -148,6 +144,10 @@ NodeType* InsertNode(ListType* ls, int32_t index, NodeType* newNode) {
 	return newNode;
 }
 
+
+
+
+
 //Removes the node and splices the list. Remember to free the node if no longer used.
 NodeType* PullNode(ListType* ls, NodeType* node) {
 	if (node != NULL) {
@@ -193,7 +193,7 @@ ElementType* PullElementByReference(ListType* ls, ElementType* element) {
 	return PullElementAndFreeNode(ls, GetNodeByElement(ls, element) );
 }
 
-ElementType* Threads_ToArray(const ListType* ls) {
+ElementType* HoneyPot_ToArray(const ListType* ls) {
 	if (bIsValidList(ls) && bListHasNodes(ls)) {
 		uint16_t elementByteSize = sizeof(ElementType);
 		uint8_t* buffer = malloc(ls->count * elementByteSize);
@@ -207,7 +207,41 @@ ElementType* Threads_ToArray(const ListType* ls) {
 			}
 			node = node->childNode;
 		}
-		return (ElementType*) buffer;
+		return buffer;
 	}
 	return NULL;
 }
+
+/*******************************************************************************************************
+* List Functions
+*******************************************************************************************************/
+ListType* HoneyPot_CreateNew(int32_t max_size){
+	ListType *ls = malloc(sizeof(ListType));
+	ls->maxsize = max_size;
+	ls->count = 0;
+	ls->firstNode = NULL;
+	ls->lastNode = NULL;
+	return ls;
+}
+
+void ProduceHoney(ListType* ls, ElementType* value){
+	InsertNode(ls, ls->count, CreateNewNode(value));
+}
+
+ElementType* ConsumeHoney(ListType* q) {
+	return PullElementAndFreeNode(q, GetNodeAtIndex(q, 0));
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+

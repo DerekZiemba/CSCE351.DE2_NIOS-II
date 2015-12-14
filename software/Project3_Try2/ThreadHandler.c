@@ -9,7 +9,9 @@
 #include <sys/alt_alarm.h>
 #include <nios2.h>
 #include "alarm_handler.h"
+#include "prototypeOS.h"
 
+#define NodeType 	ThreadQueueNode_t
 
 //static ThreadControlBlock *current_running_thread      = NULL;
 //
@@ -26,24 +28,25 @@
 //		{0,0,NULL,NULL} 	//childThreads (Threads that were joined to main thread)  These must complete before Main thread can execute
 //};
 
-//static node_t* RunningThreadNode = &{ &MainThread, 0, 0};
+//static NodeType* RunningThreadNode = &{ &MainThread, 0, 0};
 //static LinkedList* lsReadyThreads = &{0,0,NULL,NULL};
 //static LinkedList* lsBlockedThreads = &{0, 0, NULL, NULL};
 //static LinkedList* lsDoneThreads = &{0, 0, NULL, NULL};
 
 static ThreadControlBlock* MainThread;
-static node_t* RunningThreadNode;
-static LinkedList* lsReadyThreads;
-static LinkedList* lsBlockedThreads;
-static LinkedList* lsDoneThreads;
+static NodeType* RunningThreadNode;
+static ThreadQueue* lsReadyThreads;
+static ThreadQueue* lsBlockedThreads;
+static ThreadQueue* lsDoneThreads;
 
 static uint32_t nThreadsCreated = 0;
 char GetNewUniqueThreadIdentifierChar() {
 	uint32_t n = nThreadsCreated;
+	nThreadsCreated++;
 	if (n < 10) return '0' + n;
 	else if (n < 10 + 26) return 'A' + n - 10;
 	else if (n < 10 + 26 + 26) return 'a' + n - 10 - 26;
-	nThreadsCreated++;
+
 	return 0;
 }
 
@@ -111,8 +114,8 @@ void StartThread(ThreadControlBlock *thread){
 		EnqueueNode(lsReadyThreads, CreateNewNode(thread));
 	}
 	else if(thread->tstate == BLOCKED) {
-		node_t* threadNode = GetNodeByElement(lsBlockedThreads, thread);
-		node_t* threadNodeCheck = PullNode(lsBlockedThreads, threadNode);
+		NodeType* threadNode = GetNodeByElement(lsBlockedThreads, thread);
+		NodeType* threadNodeCheck = PullNode(lsBlockedThreads, threadNode);
 		if(threadNode != threadNodeCheck){
 			printf("!!!!!!!!Rogue Thread!!!!!!!");
 		}

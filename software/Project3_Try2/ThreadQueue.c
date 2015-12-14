@@ -1,12 +1,4 @@
 /*
- * LinkedList.c
- *
- *  Created on: Dec 14, 2015
- *      Author: Derek
- */
-
-
-/*
  * ListType.c
  *
  *  Created on: Dec 14, 2015
@@ -211,3 +203,37 @@ ElementType* Threads_ToArray(const ListType* ls) {
 	}
 	return NULL;
 }
+
+/*******************************************************************************************************
+* ThreadQueue
+*******************************************************************************************************/
+ListType* ThreadQueue_CreateNew(int32_t max_size){
+	ListType *ls = malloc(sizeof(ListType));
+	ls->maxsize = max_size;
+	ls->count = 0;
+	ls->firstNode = NULL;
+	ls->lastNode = NULL;
+	return ls;
+}
+
+void EnqueueThread(ListType* ls, ElementType* value){
+	InsertNode(ls, ls->count, CreateNewNode(value));
+}
+
+
+ElementType* DequeueThread(ListType* q) {
+	return PullElementAndFreeNode(q, GetNodeAtIndex(q, 0));
+}
+
+ElementType* PeekNodeThread(ListType* ls){
+	NodeType* node = GetNodeAtIndex(ls, 0);
+	return node == NULL ? NULL : node->data;
+}
+
+/*Removes a data no matter the position in queue*/
+ElementType* PullThreadFromQueue(ListType* ls,ElementType* data){
+	return PullElementByReference(ls, data);
+}
+
+
+

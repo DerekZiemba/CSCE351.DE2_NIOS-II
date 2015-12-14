@@ -5,7 +5,7 @@
 #include "Semaphore.h"
 
 /* a delay time used to  adjust the frequency of printf messages */
-#define MAX 60000
+#define MAX 90000
 #define HONEY_DELAY MAX/2
 #define BEES 10
 #define BEARS 1
@@ -54,11 +54,13 @@ void Bear(char threadID) {
 		 while(lsHoneyPot.count > 0){
 			 char atePortionFromHoneyBee = Dequeue(&lsHoneyPot);
 			 char* byteStream =(char*) LinkedList_ToByteStream(&lsHoneyPot, sizeof(char));
-			 printf("Ate: %c, Honeypot Left: %.*s\n", atePortionFromHoneyBee, lsHoneyPot.count, byteStream);
+			 printf("Ate: %c, Honeypot(%lu) Left: %.*s\n", atePortionFromHoneyBee,lsHoneyPot.count, lsHoneyPot.count, byteStream);
 			 free(byteStream);
 			 for (j = 0; j < MAX; j++);
-			 mysem_up(notFull);
+
 		 }
+		 notFull->count=29;
+		 mysem_up(notFull);
 		 mysem_up(mutex);
 	}
 }
@@ -80,33 +82,47 @@ void prototypeOS(){
 
 	uint32_t i;
 
-	ThreadControlBlock *thread_pointer;
+	ThreadControlBlock* thread;
 
-	for (i = 0; i < BEARS; i++) {
-		thread_pointer = CreateThread(64000,"Bear",  Bear);
-		printf("Created Bear with id: %c\n",thread_pointer->threadID);
-		StartThread(thread_pointer);
-		JoinThread(thread_pointer);
-	}
+//	ThreadControlBlock producers[BEES];
+//	ThreadControlBlock constumers[BEARS];
+
     for (i = 0; i < BEES; i++) {
-		thread_pointer = CreateThread(64000,"HoneyBee", HoneyBee);
-		printf("Created HoneyBee with id: %c\n", thread_pointer->threadID);
-		StartThread(thread_pointer);
-		JoinThread(thread_pointer);
+    	thread = CreateThread(160000, "HoneyBee", HoneyBee);
+		printf("Created HoneyBee with id: %c\n", thread->threadID);
+		StartThread(thread);
+		JoinThread(thread);
     }
-    
+	for (i = 0; i < BEARS; i++) {
+		thread =CreateThread(160000, "Bear",  Bear);
+		printf("Created Bear with id: %c\n", thread->threadID);
+		StartThread(thread);
+		JoinThread(thread);
+	}
+
+//    for (i = 0; i < BEES; i++) {
+//		JoinThread(&producers[i]);
+//    }
+//	for (i = 0; i < BEARS; i++) {
+//		JoinThread(&constumers[i]);
+//	}
+
 
     CheckForError(start_alarm(QUANTUM_LENGTH, OnInterruptHandler), "Unable to start the alarm\n");
 
     /* an endless while loop */
+uint8_t deleted = 0;
     while (1){
         printf ("This is the OS primitive for my exciting CSE351 course projects!\n");
         
         /* delay printf for a while */
-        for (i = 0; i < 10*MAX; i++);
-        mysem_delete(full);
-        mysem_delete(notFull);
-        mysem_delete(mutex);
+        for (i = 0; i < 30*MAX; i++);
+        if(GetActiveThreadCount() == 1 && !deleted){
+        	deleted++;
+            mysem_delete(full);
+            mysem_delete(notFull);
+            mysem_delete(mutex);
+        }
     }
 }
 

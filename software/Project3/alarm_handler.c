@@ -33,7 +33,7 @@ uint8_t start_alarm(uint32_t millis, void (*callback) (void* context)){
 
 
 uint32_t forceInterruptHandler(void* context){
-	alarmflag = 1;
+	alarmflag = 0;
 	alt_alarm_stop(&forcedAlarm);
     return 0;
 }

@@ -15,7 +15,7 @@
 // You can use malloc() to allocate memory space.
 MySem* mysem_create(int32_t count, char* name) {
 	MySem  *sem = malloc(sizeof(MySem));
-	sem->lsBlockedThreads = LinkedList_CreateNew(0);
+	sem->lsBlockedThreads = ThreadQueue_CreateNew(0);
 	sem->count = count;
 	sem->name = name;
 	//printf("Semaphore created with initial count: %d\n", sem->count);
@@ -30,7 +30,7 @@ void mysem_up( MySem* sem ) {
 
 	if (sem->count > 0) {
 		if (sem->lsBlockedThreads->count > 0){
-			ThreadControlBlock *blockedThread = Dequeue(sem->lsBlockedThreads);
+			ThreadControlBlock *blockedThread = DequeueThread(sem->lsBlockedThreads);
 			StartThread(blockedThread);
 			JoinThread(blockedThread);
 			printf("--> Semaphore %s: Unblocked: %s_%c, Threads waiting: %lu\n",sem->name,blockedThread->threadName, blockedThread->threadID, sem->lsBlockedThreads->count);
@@ -54,7 +54,7 @@ void mysem_down( MySem* sem ) {
 		if (sem->count < 0){
 			printf("\n BAD THINGS HERE\n");
 		}
-		Enqueue(sem->lsBlockedThreads, currentThread);
+		EnqueueThread(sem->lsBlockedThreads, currentThread);
 		BlockThread(currentThread);
 
 

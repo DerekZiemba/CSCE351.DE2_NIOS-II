@@ -1,8 +1,8 @@
 #include "prototypeOS.h"
 #include "alarm_handler.h"
 #include "ThreadHandler.h"
-#include "LinkedList.h"
 #include "Semaphore.h"
+#include "HoneyPot.h"
 
 /* a delay time used to  adjust the frequency of printf messages */
 #define MAX 60000
@@ -13,7 +13,7 @@
 #define BEE_MAX_HONEY_PRODUCTION 15
 #define BEARS_MAX_HONEYPOT_CONSUMPTION 5
 
-static LinkedList lsHoneyPot = {HONEY_POT_CAPACITY,0,NULL,NULL};
+static HoneyPot lsHoneyPot = {HONEY_POT_CAPACITY,0,NULL,NULL};
 
 static MySem *full = NULL;
 static MySem *notFull = NULL;
@@ -29,9 +29,9 @@ void HoneyBee(char threadID) {
 		mysem_down(mutex);
 
 		printf("Honeybee %c, makes deposit #%02lu into ", threadID, i);
-		Enqueue(&lsHoneyPot, (void*)(intptr_t) threadID);
+		ProduceHoney(&lsHoneyPot,  threadID);
 
-		char* byteStream = (char*) LinkedList_ToByteStream(&lsHoneyPot, sizeof(char));
+		char* byteStream = HoneyPot_ToArray(&lsHoneyPot);
 		printf("Honeypot(%lu): %.*s\n", lsHoneyPot.count, (int)lsHoneyPot.count, byteStream);
 		free(byteStream);
 
@@ -52,9 +52,9 @@ void Bear(char threadID) {
 
 		 printf("This is bear %c and it's his %lu springtime.  Watch as he snarfs down a pot of honey. \n", threadID, i);
 		 while(lsHoneyPot.count > 0){
-			 char atePortionFromHoneyBee = Dequeue(&lsHoneyPot);
-			 char* byteStream =(char*) LinkedList_ToByteStream(&lsHoneyPot, sizeof(char));
-			 printf("Ate: %c, Honeypot Left: %.*s\n", atePortionFromHoneyBee, lsHoneyPot.count, byteStream);
+			 char atePortionFromHoneyBee = ConsumeHoney(&lsHoneyPot);
+			 char* byteStream = HoneyPot_ToArray(&lsHoneyPot);
+			 printf("Ate: %c, Honeypot(%lu) Left: %.*s\n", atePortionFromHoneyBee,lsHoneyPot.count, (int)lsHoneyPot.count, byteStream);
 			 free(byteStream);
 			 for (j = 0; j < MAX; j++);
 			 mysem_up(notFull);

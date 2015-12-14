@@ -29,7 +29,8 @@ typedef struct LinkedList_t {
 
 LinkedList* LinkedList_CreateNew(uint32_t max_size);
 void 		LinkedList_Free(LinkedList* ls);
-uint8_t* 	LinkedList_ToByteStream(const LinkedList* ls, const int elementByteSize);
+uint8_t* 	LinkedList_ToArray(const LinkedList* ls, const int elementByteSize);
+
 node_t* 	CreateNewNode(void *data);
 node_t* 	GetNodeAtIndex(LinkedList* ls, const uint32_t index);
 node_t* 	PullNode(LinkedList* ls, node_t* node);

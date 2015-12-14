@@ -13,10 +13,9 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <nios2.h>
-
 #include "alarm_handler.h"
 
-#define PRINT_THREAD_HANDLER_MESSAGES 1
+#define GetByteAt(dataPtr,byteNumber) (uint8_t)*((uintptr_t*)(&(dataPtr)) + byteNumber)
 
 /***************************************************************************
 * Alarm Specific
@@ -39,6 +38,7 @@
 /***************************************************************************
 * Debugging
 ****************************************************************************/
+#define PRINT_THREAD_HANDLER_MESSAGES 1
 //#define NDEBUG //Comment in to disable assert messages
 #define CHECKMALLOC(x, msg) {					\
 	if(x == NULL) {								\
@@ -60,7 +60,7 @@
 /***************************************************************************
 * PrototypeOS
 ****************************************************************************/
-void prototype_os(void);
+void prototypeOS();
 
 /***************************************************************************
 * HelperFunctions
@@ -68,5 +68,7 @@ void prototype_os(void);
 int main();
 uint8_t bCheckInterruptsEnabled();
 void PrintThreadMessage(const char* format, ...);
+
+
 
 #endif /* PROTOTYPEOS_H_ */

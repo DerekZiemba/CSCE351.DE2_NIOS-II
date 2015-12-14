@@ -13,6 +13,10 @@
 #define PRINT_ERRORS_TO_STDOUT 1
 #define VERIFY_OPERATIONS_VALID 1
 
+#define NodeType 	ThreadQueueNode_t
+#define ElementType ThreadControlBlock
+#define ListType 	ThreadQueue
+
 typedef struct node_t {
 	void*			data;
 	struct node_t*	parentNode;
@@ -27,43 +31,52 @@ typedef struct LinkedList_t {
 	node_t*		lastNode;
 } LinkedList;
 
-LinkedList* LinkedList_CreateNew(uint32_t max_size);
-void 		LinkedList_Free(LinkedList* ls);
-uint8_t* 	LinkedList_ToByteStream(const LinkedList* ls, const int elementByteSize);
-node_t* 	CreateNewNode(void *data);
-node_t* 	GetNodeAtIndex(LinkedList* ls, const uint32_t index);
-node_t* 	PullNode(LinkedList* ls, node_t* node);
-node_t* 	InsertNode(LinkedList* ls, uint32_t index, node_t* newNode);
-node_t* 	GetNodeByElement(LinkedList* ls, void* element);
-
-int32_t 	GetNodeIndexByElement(node_t* rootNode,  void* elementRef);
-int32_t		GetElementIndex(LinkedList* ls, void* element);
-
-LinkedList* LinkedList_CreateNew(uint32_t max_size);
-void 		LinkedList_Free(LinkedList* ls);
-uint8_t* 	LinkedList_ToByteStream(const LinkedList* ls, const int elementByteSize);
-
-void* 		PullAndFreeNode(LinkedList* ls, node_t* node);
+NodeType* CreateNewNode(ElementType* data);
+ElementType* FreeNode(NodeType* node)
+NodeType* GetNodeAtIndex(ListType* ls, const int32_t index)
+NodeType* GetNodeByElement(ListType* ls,  ElementType* elementRef)
+int32_t GetNodeIndexByElement(NodeType* rootNode,  ElementType* elementRef)
+NodeType* InsertNode(ListType* ls, int32_t index, NodeType* newNode)
 
 
-
-void		InsertElementAtIndex(LinkedList* ls, uint32_t index, void* value);
-void*		GetElementAtIndex(LinkedList* ls, uint32_t index); //The value will remains in the list
-void*		PullElementAtIndex(LinkedList* ls, uint32_t index); 	//Deleted the node and returns the value contained in it.
-
-void* 		PullElementByReference(LinkedList* ls, void* element);
-void* 		PullElementByValue(LinkedList* ls, void* element, uint32_t elementByteSize);
-
-
-void 		EnqueueNode(LinkedList* ls, node_t* node);
-node_t* 	DequeueNode(LinkedList* ls);
-node_t* 	PeekNode(LinkedList* ls);
-
-void		Enqueue(LinkedList* ls, void* value); //Automatically Allocates node. Returns the newly allocated node.
-void*		Dequeue(LinkedList *q); //Automatically Frees node. Returns ptr to stored object
-void*		Peek(LinkedList *q); //Returns a reference to the next element to that would be normally dequeued
-
-
+//
+//LinkedList* LinkedList_CreateNew(uint32_t max_size);
+//void 		LinkedList_Free(LinkedList* ls);
+//uint8_t* 	LinkedList_ToByteStream(const LinkedList* ls, const int elementByteSize);
+//node_t* 	CreateNewNode(void *data);
+//node_t* 	GetNodeAtIndex(LinkedList* ls, const uint32_t index);
+//node_t* 	PullNode(LinkedList* ls, node_t* node);
+//node_t* 	InsertNode(LinkedList* ls, uint32_t index, node_t* newNode);
+//node_t* 	GetNodeByElement(LinkedList* ls, void* element);
+//
+//int32_t 	GetNodeIndexByElement(node_t* rootNode,  void* elementRef);
+//int32_t		GetElementIndex(LinkedList* ls, void* element);
+//
+//LinkedList* LinkedList_CreateNew(uint32_t max_size);
+//void 		LinkedList_Free(LinkedList* ls);
+//uint8_t* 	LinkedList_ToByteStream(const LinkedList* ls, const int elementByteSize);
+//
+//void* 		PullAndFreeNode(LinkedList* ls, node_t* node);
+//
+//
+//
+//void		InsertElementAtIndex(LinkedList* ls, uint32_t index, void* value);
+//void*		GetElementAtIndex(LinkedList* ls, uint32_t index); //The value will remains in the list
+//void*		PullElementAtIndex(LinkedList* ls, uint32_t index); 	//Deleted the node and returns the value contained in it.
+//
+//void* 		PullElementByReference(LinkedList* ls, void* element);
+//void* 		PullElementByValue(LinkedList* ls, void* element, uint32_t elementByteSize);
+//
+//
+//void 		EnqueueNode(LinkedList* ls, node_t* node);
+//node_t* 	DequeueNode(LinkedList* ls);
+//node_t* 	PeekNode(LinkedList* ls);
+//
+//void		Enqueue(LinkedList* ls, void* value); //Automatically Allocates node. Returns the newly allocated node.
+//void*		Dequeue(LinkedList *q); //Automatically Frees node. Returns ptr to stored object
+//void*		Peek(LinkedList *q); //Returns a reference to the next element to that would be normally dequeued
+//
+//
 
 
 

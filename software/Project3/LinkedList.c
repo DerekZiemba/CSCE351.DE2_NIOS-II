@@ -49,7 +49,7 @@ uint8_t _VerifyViableInsertOperation(LinkedList* ls, uint32_t index) {
 uint8_t _VerifyViableGetOperation(LinkedList* ls, uint32_t index) {
 	return CheckErrorAndPrint(bIsValidList(ls), "ERROR: List is CORRUPT\n") ? (
 		CheckErrorAndPrint(bListHasNodes(ls), "ERROR: List is Empty.  Null Ptr Returned\n") ?
-			CheckErrorAndPrint(bIsValidGetAtIndex(ls, index), "ERROR: No node exists at index\n") : 0) : 0;
+			CheckErrorAndPrint(bIsValidGetAtIndex(ls, index), "") : 0) : 0;
 }
 
 #define VerifyViableInsertOperation(ls,index) _VerifyViableInsertOperation(ls, index)
@@ -263,8 +263,6 @@ void* GetElementAtIndex(LinkedList* ls, uint32_t index) {
 	node_t* node = GetNodeAtIndex(ls, index);
 	return node == NULL ? NULL : node->data;
 }
-
-
 
 
 

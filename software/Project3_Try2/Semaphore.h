@@ -17,7 +17,7 @@
 
 typedef struct mysem_t {
 	ThreadControlBlock* LockingThread;
-	LinkedList *lsBlockedThreads;
+	ThreadQueue *lsBlockedThreads;
 	int32_t count;
 	char* name;
 } MySem;
