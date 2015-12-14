@@ -1,6 +1,8 @@
 # =========================
 # Misc File Ignores
 # =========================
+*.7z
+
 HandinCode/
 ExampleCode/
 
