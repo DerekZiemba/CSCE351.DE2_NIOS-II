@@ -325,18 +325,30 @@ node_t* PeekNode(LinkedList* ls) {
 	return GetNodeAtIndex(ls, 0);
 }
 
+
+
 //Appends to end of list
-void Enqueue(LinkedList* ls, void* value) {
-	EnqueueNode(ls, CreateNewNode(value));
+void EnqueueValue(LinkedList* ls, void* value) {
+	InsertNode(ls, ls->count, CreateNewNode(value));
 }
 
 //Pull from start of list.
-void* Dequeue(LinkedList* ls) {
+void* DequeueValue(LinkedList* ls) {
 	return PullElementAtIndex(ls, 0);
 }
 
+//Push onto front of list
+void PushValue(LinkedList* ls, void* value) {
+	InsertNode(ls, 0, CreateNewNode(value));
+}
+
+//Remove all references to the value in the list regardless of position
+void* RemoveValue(LinkedList* ls, void* value) {
+	InsertNode(ls, 0, CreateNewNode(value));
+}
+
 //View first element
-void* Peek(LinkedList* ls) {
+void* PeekValue(LinkedList* ls) {
 	return GetElementAtIndex(ls, 0);
 }
 

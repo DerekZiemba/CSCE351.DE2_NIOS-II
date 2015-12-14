@@ -33,7 +33,7 @@ void mysem_up( MySem* sem ) {
 	if (sem->count > 0) {
 
 		while(sem->lsBlockedThreads->count > 0){
-			ThreadControlBlock *blockedThread = Dequeue(sem->lsBlockedThreads);
+			ThreadControlBlock *blockedThread = DequeueValue(sem->lsBlockedThreads);
 			StartThread(blockedThread);
 			printf("-------> Semaphore %s Unblocked: %s_%c. Threads waiting: %lu\n",sem->name,blockedThread->threadName, blockedThread->threadID, sem->lsBlockedThreads->count);
 		}
@@ -57,7 +57,7 @@ void mysem_down( MySem* sem ) {
 		if (sem->count < 0){
 			printf("\n BAD THINGS HERE\n");
 		}
-		Enqueue(sem->lsBlockedThreads, currentThread);
+		EnqueueValue(sem->lsBlockedThreads, currentThread);
 		//printf("-------> Semaphore %s: BlockedID: %s_%c. Threads waiting: %lu\n",sem->name,currentThread->threadName, currentThread->threadID, sem->lsBlockedThreads->count);
 
 		BlockThread(currentThread);
@@ -68,7 +68,7 @@ void mysem_down( MySem* sem ) {
 
 		ENABLE_INTERRUPTS();
 		while (currentThread->tstate == BLOCKED){}
-		mysem_down(sem);
+		//mysem_down(sem);
 	}
 
 }
@@ -77,9 +77,9 @@ void mysem_delete( MySem* sem ) {
 	if(sem != NULL){
 		printf("Deleting semaphore.\n");
 		DISABLE_INTERRUPTS();
-//		free(sem->lsBlockedThreads);
-//		free(sem);
-//		sem = NULL;
+		free(sem->lsBlockedThreads);
+		free(sem);
+		sem = NULL;
 		ENABLE_INTERRUPTS();
 	}
 }

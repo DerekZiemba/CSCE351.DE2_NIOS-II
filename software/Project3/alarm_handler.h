@@ -3,6 +3,7 @@
 #define ALARM_HANDLER_H_
 #include <stdint.h>
 
+#define QUANTUM_LENGTH 900 //milliseconds
 
 uint8_t is_alarmflag_set();
 void reset_alarmflag();

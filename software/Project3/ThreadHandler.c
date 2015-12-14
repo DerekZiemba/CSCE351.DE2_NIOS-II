@@ -13,9 +13,10 @@
 
 static ThreadControlBlock* MainThread;
 static ThreadControlBlock* RunningThread;
-static LinkedList* lsReadyThreads;
-static LinkedList* lsBlockedThreads;
+static LinkedList* lsActiveThreads;
 static LinkedList* lsDoneThreads;
+//static LinkedList* lsBlockedThreads;
+
 
 static uint32_t nThreadsCreated = 0;
 char GetNewUniqueThreadIdentifierChar() {
@@ -30,7 +31,7 @@ char GetNewUniqueThreadIdentifierChar() {
 
 uint32_t GetActiveThreadCount(){
 	CONDITIONALLY_DISABLE_INTERRUPTS
-	uint32_t threadCount = 1 + lsReadyThreads->count + lsBlockedThreads->count;
+	uint32_t threadCount = 1 + lsActiveThreads->count + lsBlockedThreads->count;
 	CONDITIONALLY_ENABLE_INTERRUPTS
     return threadCount;
 }
@@ -48,7 +49,7 @@ void InitializeThreadHandler(){
 
 	RunningThread = MainThread;
 
-	lsReadyThreads = LinkedList_CreateNew(0);
+	lsActiveThreads = LinkedList_CreateNew(0);
 	lsBlockedThreads = LinkedList_CreateNew(0);
 	lsDoneThreads = LinkedList_CreateNew(0);
 }
@@ -90,7 +91,7 @@ void StartThread(ThreadControlBlock *thread){
 	CONDITIONALLY_DISABLE_INTERRUPTS
 	if(thread->tstate == NEW){
 		thread->tstate = READY;
-		EnqueueNode(lsReadyThreads, CreateNewNode(thread));
+		EnqueueNode(lsActiveThreads, CreateNewNode(thread));
 	}
 	else if(thread->tstate == BLOCKED) {
 		node_t* threadNode = GetNodeByElement(lsBlockedThreads, thread);
@@ -100,7 +101,7 @@ void StartThread(ThreadControlBlock *thread){
 		}
 		thread->tstate = READY;
 		//This thread was just unblocked so it will jump the queue
-		InsertNode(lsReadyThreads, 0, threadNode);
+		InsertNode(lsActiveThreads, 0, threadNode);
 	}
 	else if(thread->tstate == READY) {
 		//Do nothing, it is already in the ReadyQueue.
@@ -167,6 +168,10 @@ void CleanupThread(){
     while(1);
 }
 
+ThreadControlBlock* SortThreadList(ThreadControlBlock* currentThread){
+
+}
+
 ThreadControlBlock* GetNextThread(ThreadControlBlock* currentThread){
 	ThreadControlBlock *nextThread = NULL;
 	ThreadControlBlock *temp = NULL;
@@ -174,22 +179,23 @@ ThreadControlBlock* GetNextThread(ThreadControlBlock* currentThread){
 	if(currentThread->tstate == BLOCKED){
 		if(currentThread->joinedThreads->count > 0){
 
-			temp = Dequeue(currentThread->joinedThreads);
-			nextThread = PullElementByReference(lsReadyThreads, temp);
+			temp = DequeueValue(currentThread->joinedThreads);
+			nextThread = PullElementByReference(lsActiveThreads, temp);
 			if(nextThread==NULL){
 				nextThread = PullElementByReference(lsBlockedThreads, temp);
 			}
 
 			if(nextThread!=NULL){
-				InsertNode(lsReadyThreads, 0, CreateNewNode(nextThread));
+				InsertNode(lsActiveThreads, 0, CreateNewNode(nextThread));
 			}
 		}
 	}
 
-	if(lsReadyThreads->count > 0){
-		nextThread = Dequeue(lsReadyThreads);
+	if(lsActiveThreads->count > 0){
+		nextThread = DequeueValue(lsActiveThreads);
+
 	} else if(lsBlockedThreads->count > 0){
-		nextThread = Dequeue(lsBlockedThreads);
+		nextThread = DequeueValue(lsBlockedThreads);
 	}else{
 		printf("Problem");
 	}
@@ -208,7 +214,7 @@ void *ThreadScheduler(void *context){
 	if( currentThread->tstate == BLOCKED ){
 		if(count > 1){
 			PrintThreadMessage("Moved %s_%c To BLOCKED List\n",currentThread->threadName, currentThread->threadID);
-			Enqueue(lsBlockedThreads, currentThread);
+			EnqueueValue(lsBlockedThreads, currentThread);
 		}else{
 			return context;
 		}
@@ -216,16 +222,16 @@ void *ThreadScheduler(void *context){
 	} else {
 		 if(currentThread->tstate == READY){
 			//PrintThreadMessage("Moved %s_%c To READY List\n",currentThread->threadName, currentThread->threadID);
-			Enqueue(lsReadyThreads, currentThread);
+			EnqueueValue(lsActiveThreads, currentThread);
 		}
 		else if(currentThread->tstate == RUNNING){
 			PrintThreadMessage("Moved %s_%c To READY List\n",currentThread->threadName, currentThread->threadID);
 			currentThread->tstate = READY;
-			Enqueue(lsReadyThreads, currentThread);
+			EnqueueValue(lsActiveThreads, currentThread);
 		}
 		else if( currentThread->tstate == DONE){
 			PrintThreadMessage("Moved %s_%c To DONE List\n",currentThread->threadName, currentThread->threadID);
-			Enqueue(lsDoneThreads, currentThread);
+			EnqueueValue(lsDoneThreads, currentThread);
 			TerminateThread(currentThread);
 		}
 	}
@@ -237,79 +243,6 @@ void *ThreadScheduler(void *context){
 	CONDITIONALLY_ENABLE_INTERRUPTS
 	return context;
 }
-
-
-//void *mythread_schedule(void *context){
-//	ThreadControlBlock *currentThread;
-//	ThreadControlBlock *nextThread;
-//
-//	CONDITIONALLY_DISABLE_INTERRUPTS
-//	if(MainThread.sp == NULL){
-//		MainThread->sp = (uint32_t *)context;
-//		return (void *)(MainThread->sp);
-//	}
-//
-//	currentThread = DequeueThread(MainThread->lsChildThreads[RUNNING]);
-//
-//
-//	currentThread->sp = (uint32_t *)context;
-//	SwapThreadQueue(currentThread, currentThread->tstate);
-//
-//	uint32_t readyCount = currentThread->lsChildThreads[READY];
-//	uint32_t blockedCount = currentThread->lsChildThreads[BLOCKED];
-//
-//	while(readyCount > 0){
-//
-//	if(currentThread->state == BLOCKED){
-//
-//	}
-//
-//
-//		ThreadControlBlock *nextThread;
-//		if(currentThread->lsJoinedThreads->count > 0) {
-//			nextThread = Dequeue(currentThread->lsJoinedThreads);
-//			while()
-//		}
-//
-//		 Peek(&ThreadHandlerQueues[READY]);
-//
-//
-//	    if (ThreadHandler.threadStateQueues[READY].count > 0){
-//	        if (currentThread != NULL){
-//	            if(currentThread->tstate == RUNNING){
-//	            	currentThread->tstate = READY;
-//	            }
-//	            currentThread->sp = (uint32_t *)context;
-//	            Enqueue(&lsReadyThreads, (void*) currentThread);
-//	        }
-//	        else if (main_stack_pointer == NULL){
-//	            main_stack_pointer = (uint32_t *)context;
-//	        }
-//
-//	        currentThread = (ThreadControlBlock *)Dequeue(&lsReadyThreads);
-//	        int allAreBlockedCounter = lsReadyThreads.count;
-//	        while(currentThread->tstate == BLOCKED){
-//	        	if (allAreBlockedCounter < 0) {
-//	        		printf("we have some problems");
-//	        	}
-//	        	Enqueue(&lsReadyThreads, (void*) currentThread);
-//	        	currentThread = (ThreadControlBlock *)Dequeue(&lsReadyThreads);
-//	        	allAreBlockedCounter--;
-//	        }
-//	        currentThread->state = RUNNING;
-//
-//	        context = (void *)(currentThread->sp);
-//	    }
-//	    else if (currentThread==NULL && main_stack_pointer!=NULL){
-//	        context = (void *)main_stack_pointer;
-//	    }
-//
-//
-//
-//	CONDITIONALLY_ENABLE_INTERRUPTS
-//    return context;
-//}
-
 
 
 

@@ -60,9 +60,9 @@ void 		EnqueueNode(LinkedList* ls, node_t* node);
 node_t* 	DequeueNode(LinkedList* ls);
 node_t* 	PeekNode(LinkedList* ls);
 
-void		Enqueue(LinkedList* ls, void* value); //Automatically Allocates node. Returns the newly allocated node.
-void*		Dequeue(LinkedList *q); //Automatically Frees node. Returns ptr to stored object
-void*		Peek(LinkedList *q); //Returns a reference to the next element to that would be normally dequeued
+void		EnqueueValue(LinkedList* ls, void* value); //Automatically Allocates node. Returns the newly allocated node.
+void*		DequeueValue(LinkedList *q); //Automatically Frees node. Returns ptr to stored object
+void*		PeekValue(LinkedList *q); //Returns a reference to the next element to that would be normally dequeued
 
 
 

@@ -5,7 +5,7 @@
 #include "Semaphore.h"
 
 /* a delay time used to  adjust the frequency of printf messages */
-#define MAX 90000
+#define MAX 60000
 #define HONEY_DELAY MAX/2
 #define BEES 10
 #define BEARS 1
@@ -29,7 +29,7 @@ void HoneyBee(char threadID) {
 		mysem_down(mutex);
 
 		printf("Honeybee %c, makes deposit #%02lu into ", threadID, i);
-		Enqueue(&lsHoneyPot, (void*)(intptr_t) threadID);
+		EnqueueValue(&lsHoneyPot, (void*)(intptr_t) threadID);
 
 		char* byteStream = (char*) LinkedList_ToByteStream(&lsHoneyPot, sizeof(char));
 		printf("Honeypot(%lu): %.*s\n", lsHoneyPot.count, (int)lsHoneyPot.count, byteStream);
@@ -52,7 +52,7 @@ void Bear(char threadID) {
 
 		 printf("This is bear %c and it's his %lu springtime.  Watch as he snarfs down a pot of honey. \n", threadID, i);
 		 while(lsHoneyPot.count > 0){
-			 char atePortionFromHoneyBee = Dequeue(&lsHoneyPot);
+			 char atePortionFromHoneyBee = DequeueValue(&lsHoneyPot);
 			 char* byteStream =(char*) LinkedList_ToByteStream(&lsHoneyPot, sizeof(char));
 			 printf("Ate: %c, Honeypot(%lu) Left: %.*s\n", atePortionFromHoneyBee,lsHoneyPot.count, lsHoneyPot.count, byteStream);
 			 free(byteStream);
@@ -81,11 +81,7 @@ void prototypeOS(){
 	mutex = mysem_create(1, "mutex");
 
 	uint32_t i;
-
 	ThreadControlBlock* thread;
-
-//	ThreadControlBlock producers[BEES];
-//	ThreadControlBlock constumers[BEARS];
 
     for (i = 0; i < BEES; i++) {
     	thread = CreateThread(160000, "HoneyBee", HoneyBee);
