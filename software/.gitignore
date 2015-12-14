@@ -1,0 +1,61 @@
+# =========================
+# Misc File Ignores
+# =========================
+HandinCode/
+ExampleCode/
+
+
+
+# =========================
+# Example Projects
+# =========================
+oskernelsproject-master/
+oskernelsproject-P2_Final_Version/
+oskernelsproject-P3/
+Project1/
+
+
+# =========================
+# Eclipse Ignores
+# =========================
+.settings/
+.metadata/
+*.cproject
+*.force_relink
+*.project
+*create-this*
+*Makefile*
+**/obj
+*.elf
+*.mk
+
+
+*.objdump
+*.map
+
+
+# =========================
+# NIOS 2 Ignores
+# =========================
+**/*_bsp/
+*transcript*
+*nios_system_generation_script*
+
+
+
+
+# =========================
+# Windows Ignores
+# =========================
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+*.tmp
+.DS_Store
+
