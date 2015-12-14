@@ -18,6 +18,7 @@ enum ThreadState {NEW, READY, RUNNING, BLOCKED, DONE, NUM_TSTATES};
 /* thread control block */
 typedef struct ThreadControlBlock {
     enum ThreadState  tstate;
+    char* threadName;
     char threadID;
     uint32_t *sp;
     uint32_t *stack;
@@ -31,7 +32,7 @@ void InitializeThreadHandler();
 
 uint32_t GetActiveThreadCount();
 
-ThreadControlBlock *CreateThread(uint32_t stack_size, void (*mythread)(char threadID));
+ThreadControlBlock *CreateThread(uint32_t stack_size, char* name, void (*mythread)(char threadID));
 
 ThreadControlBlock* GetRunningThread();
 

@@ -57,6 +57,7 @@ uint32_t GetActiveThreadCount(){
 void InitializeThreadHandler(){
 	MainThread = malloc(sizeof(ThreadControlBlock));
 	CHECKMALLOC(MainThread, "ThreadControlBlock");
+	MainThread->threadName = "MainThread";
 	MainThread->threadID = GetNewUniqueThreadIdentifierChar();
 	MainThread->tstate = RUNNING;
 	MainThread->parentThread = NULL;
@@ -72,9 +73,10 @@ void InitializeThreadHandler(){
 }
 
 
-ThreadControlBlock *CreateThread(uint32_t stackBytes, void (*funcptr)(char threadID)){
+ThreadControlBlock *CreateThread(uint32_t stackBytes, char* name, void (*funcptr)(char threadID)){
 	ThreadControlBlock *thread	= malloc(sizeof(ThreadControlBlock));
 	CHECKMALLOC(thread, "ThreadControlBlock");
+	thread->threadName = name;
 	thread->threadID = GetNewUniqueThreadIdentifierChar();
 	thread->tstate = NEW;
 	thread->parentThread = NULL;
@@ -143,7 +145,7 @@ void BlockThread(ThreadControlBlock* thread){
 	CONDITIONALLY_DISABLE_INTERRUPTS
 	thread->tstate = BLOCKED;
 	CONDITIONALLY_ENABLE_INTERRUPTS
-	forceInterrupt();
+	//forceInterrupt();
 	//while(thread->tstate == BLOCKED){}
 }
 
@@ -190,21 +192,21 @@ void *ThreadScheduler(void *context){
 	currentThread->sp = (uint32_t *)context;
 
 	if(currentThread->tstate == READY){
-		PrintThreadMessage("Moved Running Thread %c To READY List", currentThread->threadID);
+		PrintThreadMessage("Moved %s_%c To READY List\n",currentThread->threadName, currentThread->threadID);
 		currentThread->tstate = READY;
 		EnqueueNode(lsReadyThreads, RunningThreadNode);
 	}
 	else if(currentThread->tstate == RUNNING){
-		PrintThreadMessage("Moved Running Thread %c To READY List", currentThread->threadID);
+		PrintThreadMessage("Moved %s_%c To READY List\n",currentThread->threadName, currentThread->threadID);
 		currentThread->tstate = READY;
 		EnqueueNode(lsReadyThreads, RunningThreadNode);
 	}
 	else if( currentThread->tstate == BLOCKED ){
-		PrintThreadMessage("Moved Thread %c To BLOCKED List", currentThread->threadID);
+		PrintThreadMessage("Moved %s_%c To BLOCKED List\n",currentThread->threadName, currentThread->threadID);
 		EnqueueNode(lsBlockedThreads, RunningThreadNode);
 	}
 	else if( currentThread->tstate == DONE){
-		PrintThreadMessage("Moved Thread %c To DONE List", currentThread->threadID);
+		PrintThreadMessage("Moved %s_%c To DONE List\n",currentThread->threadName, currentThread->threadID);
 		EnqueueNode(lsDoneThreads, RunningThreadNode);
 		TerminateThread(currentThread);
 	}

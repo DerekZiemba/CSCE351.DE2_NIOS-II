@@ -27,28 +27,31 @@ TCB *CreateThread(void (*funcptr)(uint32_t), uint32_t threadID,  threadStatus st
 	thread->startTicks = g_tickCounter;
 	thread->stack = malloc(stackBytes);
 
+	thread->stackSize = stackBytes;
+	thread->fp 		 = (uint32_t)thread->sp[-1];	// fp
+
     thread->sp       = (uint32_t *)(thread->stack + stackBytes/4 - 19);
     thread->sp[18]   = (uint32_t)funcptr;							// ea
     thread->sp[17]   = 1;											// estatus
     thread->sp[5]    = threadID;									// r4
     thread->sp[0]    = (uint32_t)CleanupThread;					// ra
     thread->sp[-1]   = (uint32_t)(thread->stack + stackBytes/4);	// fp
-    thread->fp 		 = (uint32_t)(thread->stack + stackBytes/4);	// fp
+
 
 	return thread;
 }
 
-uint64_t mythread_scheduler(uint64_t context){ // stack pointer
+void* mythread_scheduler(void* context){ // stack pointer
 	DISABLE_INTERRUPTS();
 	TCB *thisThread = NULL;
 	TCB *nextThread = NULL;
 
-	uint32_t * param_ptr = 	&context;
-	uint32_t stackpointer =  *param_ptr; //Returns in register r4
-	uint32_t framepointer =  *(param_ptr+1); //Returns in register r5
-//
-	uint64_t returnValue;
-	uint32_t * retptr = &returnValue;
+//	uint32_t * param_ptr = 	&context;
+//	uint32_t stackpointer =  *param_ptr; //Returns in register r4
+//	uint32_t framepointer =  *(param_ptr+1); //Returns in register r5
+////
+//	uint64_t returnValue;
+//	uint32_t * retptr = &returnValue;
 
 	alt_u16 nThreadsRunning = ThreadCount(threads, RUNNING);
 	alt_u16 nThreadsReady = ThreadCount(threads, READY);
@@ -63,8 +66,9 @@ uint64_t mythread_scheduler(uint64_t context){ // stack pointer
 		thisThread = malloc(sizeof(TCB));
 		thisThread->thread_id = MAIN_THREAD_ID;
 		thisThread->scheduling_status = RUNNING;
-		thisThread->sp = stackpointer;
-		thisThread->fp = framepointer;
+		thisThread->sp = (uint32_t*)context;
+		thisThread->stack = (uint32_t*)context;
+		//thisThread->fp = framepointer;
 		thisThread->totalTicks = g_tickCounter;
 		thisThread->lastStartTicks = g_tickCounter;
 		thisThread->startTicks = 0;
@@ -84,11 +88,16 @@ uint64_t mythread_scheduler(uint64_t context){ // stack pointer
 			nextThread =  DequeueThread(threads, nThreadsReady > 0 ? READY : WAITING);
 		}
 		else{
-			thisThread->sp = stackpointer;
-			thisThread->fp = framepointer;
+			thisThread->sp = (uint32_t*)context;
+		//	thisThread->sp = stackpointer;
+		//	thisThread->fp = framepointer;
 
-			int32_t stackBytesFree =  thisThread->sp - thisThread->stack;
-			sprintf(strBuff + strlen(strBuff), " | Stack Bytes Remaining= %d", stackBytesFree);
+			int32_t stackpointer = thisThread->sp;
+			int32_t stackEnd = thisThread->stack;
+			int32_t stackSize = thisThread->stackSize;
+			int32_t bytesFree = stackpointer - stackEnd;
+			int32_t stackBytesConsumption =  stackSize - bytesFree;
+			sprintf(strBuff + strlen(strBuff), " | Stack Bytes Consumption= %d", stackBytesConsumption);
 
 			if(thisThread->scheduling_status != WAITING){
 				thisThread->scheduling_status = READY;
@@ -101,9 +110,9 @@ uint64_t mythread_scheduler(uint64_t context){ // stack pointer
 		nextThread->lastStartTicks = g_tickCounter;
 		EnqueueThread(threads, nextThread->scheduling_status, nextThread);
 
-		*(retptr) = nextThread->sp;
-		*(retptr + 1) = nextThread->fp;
-
+//		*(retptr) = nextThread->sp;
+//		*(retptr + 1) = nextThread->fp;
+		context = (void*) nextThread->sp;
 		sprintf(strBuff + strlen(strBuff), " | Queueing=%lu | Scheduling=%lu", thisThread->thread_id, nextThread->thread_id);
 	}
 	else {
@@ -120,7 +129,7 @@ uint64_t mythread_scheduler(uint64_t context){ // stack pointer
 #endif
 
 	ENABLE_INTERRUPTS();
-	return returnValue;
+	return context;
 }
 
 
@@ -240,41 +249,33 @@ uint32_t myinterrupt_handler(void* context) {
 uint16_t stackTest(
 		int16_t iterationsToDo,
 		int16_t iteration,
-		int16_t initialStackPointer,
-		int16_t framePointer,
-		int16_t stackEnd,
-		int16_t stackConsumption,
+		int32_t initialStackPointer,
+		int32_t framePointer,
+		int32_t stackEnd,
+		int32_t stackConsumption,
 		int32_t  stackRemainingBytes){
 
 	if(iteration == 0){
 		NIOS2_READ_SP(initialStackPointer);
 	}
-	TCB* me = GetRunningThread();
-	uint32_t threadID = me->thread_id;
 
 	if(iteration == 0){
-		stackEnd = me->stack;
-		//framePointer = me->fp;
+		TCB* me = GetRunningThread();
+		stackEnd = (uint32_t)*(&(me->stack));
+		framePointer = &me->fp;
 	}
 
 	if(iterationsToDo > 0){
 		iterationsToDo = iterationsToDo -1;
 		iteration = iteration + 1;
 
-		uint32_t stackptr = 0;
+		int32_t stackptr = 0;
 		NIOS2_READ_SP(stackptr);
 
 		stackConsumption =  initialStackPointer - stackptr;
 		stackRemainingBytes = stackptr - stackEnd;
 		int16_t bytesPerCall = stackConsumption / iteration;
 
-		if(stackRemainingBytes < 256){
-			printf("Stack Overflow Imminent. Bytes Left = %lu.\n", stackRemainingBytes);
-			int breakhere = 0;
-		}
-		if(iterationsToDo % 50 == 0){
-			int breakhere = 0;
-		}
 		return stackTest(iterationsToDo,iteration,initialStackPointer, framePointer, stackEnd,stackConsumption,stackRemainingBytes);
 	}
 	return iteration;
@@ -287,9 +288,9 @@ void mythread(uint32_t thread_id){
 	for (i = 0; i < n; i++){
 		printf("This is message %d of thread #%lu.\n", i, thread_id);
 		for(j=0 ; j < MAX ; j++){}
-		for(j=0 ; j < 50 ; j++){
-			//uint16_t iterations = stackTest(200, 0, 0, 0,0, 0, 0);
-		}
+//		for(j=0 ; j < 10 ; j++){
+//			uint16_t iterations = stackTest(250, 0, 0, 0,0, 0, 0);
+//		}
 
 	}
 }

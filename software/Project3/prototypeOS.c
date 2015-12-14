@@ -83,13 +83,13 @@ void prototypeOS(){
 	ThreadControlBlock *thread_pointer;
 
 	for (i = 0; i < BEARS; i++) {
-		thread_pointer = CreateThread(16000, Bear);
-		printf("Created Bear with id: %c\n", thread_pointer->threadID);
+		thread_pointer = CreateThread(64000,"Bear",  Bear);
+		printf("Created Bear with id: %c\n",thread_pointer->threadID);
 		StartThread(thread_pointer);
 		JoinThread(thread_pointer);
 	}
     for (i = 0; i < BEES; i++) {
-		thread_pointer = CreateThread(GetThreadIdentifierChar(threadCount), 16000, HoneyBee);
+		thread_pointer = CreateThread(64000,"HoneyBee", HoneyBee);
 		printf("Created HoneyBee with id: %c\n", thread_pointer->threadID);
 		StartThread(thread_pointer);
 		JoinThread(thread_pointer);

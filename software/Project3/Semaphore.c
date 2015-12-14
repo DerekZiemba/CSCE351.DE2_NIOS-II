@@ -33,7 +33,7 @@ void mysem_up( MySem* sem ) {
 			ThreadControlBlock *blockedThread = Dequeue(sem->lsBlockedThreads);
 			StartThread(blockedThread);
 			JoinThread(blockedThread);
-			printf("%s: Unblocked: %c, Threads waiting: %lu\n",sem->name, blockedThread->threadID, sem->lsBlockedThreads->count);
+			printf("--> Semaphore %s: Unblocked: %s_%c, Threads waiting: %lu\n",sem->name,blockedThread->threadName, blockedThread->threadID, sem->lsBlockedThreads->count);
 		}
 	}
 	ENABLE_INTERRUPTS();
@@ -62,7 +62,7 @@ void mysem_down( MySem* sem ) {
 		//mythread_join(currentThread, sem->LockingThread);
 		//mythread_block(currentThread);
 
-		printf("%s: BlockedID: %c, Threads waiting: %lu\n",sem->name, currentThread->threadID, sem->lsBlockedThreads->count);
+		printf("--> Semaphore%s: BlockedID: %s_%c, Threads waiting: %lu\n",sem->name,currentThread->threadName, currentThread->threadID, sem->lsBlockedThreads->count);
 		ENABLE_INTERRUPTS();
 		while (currentThread->tstate == BLOCKED){}
 		mysem_down(sem);

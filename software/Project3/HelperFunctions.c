@@ -30,7 +30,7 @@ void PrintThreadMessage(const char* format, ...){
 * Entry Point
 ***********************************************************************/
 int main() {
-	printf("PrototypeOS ");
+	printf("PrototypeOS \n");
 	prototypeOS();
 	return 0;
 }

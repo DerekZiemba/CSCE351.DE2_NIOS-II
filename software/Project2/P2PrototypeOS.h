@@ -4,7 +4,7 @@
 #include "sys/alt_alarm.h"
 #include "nios2.h"
 
-#define QUANTUM_LENGTH 1000 //milliseconds
+#define QUANTUM_LENGTH 500 //milliseconds
 
 #define RELATIVE_SPEED_MULTIPLIER 30
 #define MAX 3000 * RELATIVE_SPEED_MULTIPLIER
@@ -14,7 +14,7 @@
 #define NUM_THREADS 12
 #define MAIN_THREAD_ID 1337
 #define NULL_THREAD_ID -1
-#define STACK_SIZE 16000
+#define STACK_SIZE 4096
 
 #define SHOW_THREAD_STATS 1
 #define SHOW_ITERRUPT_STATS 1
@@ -52,9 +52,11 @@ typedef enum threadStatus {  READY = 0, RUNNING = 1,  WAITING = 2,  DONE = 3} th
 typedef struct ThreadControlBlock {
 	uint32_t thread_id;
 	threadStatus scheduling_status;
+	uint32_t stackSize;
 	uint32_t *stack;
-	uint32_t *sp;
 	uint32_t *fp;
+	uint32_t *sp;
+
 	uint32_t blocking_id;
 	uint32_t totalTicks;
 	uint32_t lastStartTicks;
@@ -109,7 +111,8 @@ TCB * LookupThread(ThreadQueue *tq, threadStatus status, int thread_id);
 void prototype_os(void);
 
 uint32_t myinterrupt_handler(void* context);
-uint64_t mythread_scheduler(uint64_t context);
+
+void* mythread_scheduler(void* context);
 void mythread(uint32_t thread_id);
 TCB *CreateThread(void (*start_routine)(uint32_t), uint32_t thread_id,  threadStatus status, int stacksizeBytes);
 void mythread_join(uint32_t thread_id);
