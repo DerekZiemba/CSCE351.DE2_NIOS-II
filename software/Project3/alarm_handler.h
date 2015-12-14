@@ -1,17 +1,14 @@
-/* 
-    Name:   alarm_handler.h
-    Author: Dongyuan Zhan
-    Date:   11/20/2010
 
-Description:
-    Functions used to handle things related to alarm interrupts
-*/
+#ifndef ALARM_HANDLER_H_
+#define ALARM_HANDLER_H_
 #include <stdint.h>
 
-uint32_t is_alarmflag_set();
 
+uint8_t is_alarmflag_set();
 void reset_alarmflag();
+void set_alarmflag();
 
-uint32_t myinterrupt_handler(void* context);
+uint8_t start_alarm(uint32_t millis, void (*callback) (void* context));
+void forceInterrupt();
 
-uint32_t start_alarm_succeed(uint32_t millis);
+#endif /* ALARM_HANDLER_H_ */

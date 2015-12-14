@@ -1,36 +1,45 @@
 #include <stdio.h>
 #include <sys/alt_alarm.h>
 #include "alarm_handler.h"
-#include "thread_handler.h"
 
+/* The resolution is 100ms but it accepts input in single millis */
+#define ALARMTICKS(x) ((alt_ticks_per_second()*x)/1000)
 
 /* a local alarm instance */
 static alt_alarm alarm;
+static alt_alarm forcedAlarm;
+
 static uint32_t tickrate;
+static uint8_t alarmflag = 0;
 
-/* a global flag for the alarm interrupt */
-uint32_t alarmflag = 0;
+uint8_t is_alarmflag_set(){ return alarmflag; }
+void reset_alarmflag(){ alarmflag = 0; }
 
-/* test if "alarmflag" is set */
-uint32_t is_alarmflag_set(){
-    return alarmflag != 0;
-}
-
-/* reset "alarmflag" */
-void reset_alarmflag(){
-    alarmflag = 0;
-}
+void (*onInterruptCallback) (void* context);
 
 /* the alarm interrupt handler */
 uint32_t myinterrupt_handler(void* context){
     alarmflag = 1;
-    if(mythread_isQempty()){
-        printf("Interrupted by the DE2 timer!\n");
-    }
+    onInterruptCallback(context);
     return tickrate;
 }
 
-uint32_t start_alarm_succeed(uint32_t millis){
-	tickrate = ((alt_ticks_per_second()*millis)/1000);
+uint8_t start_alarm(uint32_t millis, void (*callback) (void* context)){
+	tickrate = ALARMTICKS(millis);
+	onInterruptCallback = callback;
     return alt_alarm_start(&alarm, tickrate , myinterrupt_handler, NULL) >= 0;
 }
+
+
+
+uint32_t forceInterruptHandler(void* context){
+	alarmflag = 1;
+	alt_alarm_stop(&forcedAlarm);
+    return 0;
+}
+
+void forceInterrupt(){
+	alarmflag = 1;
+    alt_alarm_start(&forcedAlarm, 1 , forceInterruptHandler, NULL);
+}
+

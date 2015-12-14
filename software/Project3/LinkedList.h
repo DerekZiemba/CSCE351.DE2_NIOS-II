@@ -28,21 +28,42 @@ typedef struct LinkedList_t {
 } LinkedList;
 
 LinkedList* LinkedList_CreateNew(uint32_t max_size);
+void 		LinkedList_Free(LinkedList* ls);
+uint8_t* 	LinkedList_ToByteStream(const LinkedList* ls, const int elementByteSize);
+node_t* 	CreateNewNode(void *data);
+node_t* 	GetNodeAtIndex(LinkedList* ls, const uint32_t index);
+node_t* 	PullNode(LinkedList* ls, node_t* node);
+node_t* 	InsertNode(LinkedList* ls, uint32_t index, node_t* newNode);
+node_t* 	GetNodeByElement(LinkedList* ls, void* element);
+
+int32_t 	GetNodeIndexByElement(node_t* rootNode,  void* elementRef);
+int32_t		GetElementIndex(LinkedList* ls, void* element);
+
+LinkedList* LinkedList_CreateNew(uint32_t max_size);
+void 		LinkedList_Free(LinkedList* ls);
 uint8_t* 	LinkedList_ToByteStream(const LinkedList* ls, const int elementByteSize);
 
-void		InsertValueAtIndex(LinkedList* ls, uint32_t index, void* value);
-void*		GetValueAtIndex(LinkedList* ls, uint32_t index); //The value will remains in the list
-void*		PullValueAtIndex(LinkedList* ls, uint32_t index); 	//Deleted the node and returns the value contained in it.
+void* 		PullAndFreeNode(LinkedList* ls, node_t* node);
 
-/*A Doubly linked list isn't the most optimal for a queue.  But I'm going for re-usability here. */
+
+
+void		InsertElementAtIndex(LinkedList* ls, uint32_t index, void* value);
+void*		GetElementAtIndex(LinkedList* ls, uint32_t index); //The value will remains in the list
+void*		PullElementAtIndex(LinkedList* ls, uint32_t index); 	//Deleted the node and returns the value contained in it.
+
+void* 		PullElementByReference(LinkedList* ls, void* element);
+void* 		PullElementByValue(LinkedList* ls, void* element, uint32_t elementByteSize);
+
+
+void 		EnqueueNode(LinkedList* ls, node_t* node);
+node_t* 	DequeueNode(LinkedList* ls);
+node_t* 	PeekNode(LinkedList* ls);
+
 void		Enqueue(LinkedList* ls, void* value); //Automatically Allocates node. Returns the newly allocated node.
 void*		Dequeue(LinkedList *q); //Automatically Frees node. Returns ptr to stored object
 void*		Peek(LinkedList *q); //Returns a reference to the next element to that would be normally dequeued
-void* 		PeekTail(LinkedList* ls);
 
-/*A Doubly linked list isn't the most optimal for a stack.  But I'm going for re-usability here. */
-void		Push(LinkedList* ls, void* value); //Automatically Allocates node. Returns the newly allocated node.
-void*		Pop(LinkedList* ls); //Automatically Frees node. Returns ptr to stored object
+
 
 
 

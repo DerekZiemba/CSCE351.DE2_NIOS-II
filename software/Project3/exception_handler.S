@@ -16,7 +16,7 @@ call is_alarmflag_set					/* check the alarmflag */
 beq  r2, r0, jump_here				   	/* if alarmflag has been set, then do (1) and (2); else, goto exit_here*/
 call reset_alarmflag					/* (1) reset alarmflag */
 mov  r4, sp								/* pass the current stack pointer to mythread_scheduler */
-call mythread_schedule					/* (2) call mythread_scheduler to save the current stack pointer and return the next stack pointer */
+call ThreadScheduler					/* (2) call mythread_scheduler to save the current stack pointer and return the next stack pointer */
 stw  fp, -4(sp)							/* save the current frame pointer on top of the current stack */
 mov  sp, r2								/* load the next/new stack pointer */
 ldw  fp, -4(sp)							/* load the next/new frame pointer */

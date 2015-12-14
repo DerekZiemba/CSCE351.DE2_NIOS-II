@@ -9,7 +9,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include "Semaphore.h"
-#include "thread_handler.h"
+
 
 // It returns the starting address a semaphore variable.
 // You can use malloc() to allocate memory space.
@@ -30,10 +30,9 @@ void mysem_up( MySem* sem ) {
 
 	if (sem->count > 0) {
 		if (sem->lsBlockedThreads->count > 0){
-			ThreadControlBlock *blockedThread = (ThreadControlBlock *) Dequeue(sem->lsBlockedThreads);
-			mythread_start(blockedThread);
-			ThreadControlBlock *thread = GetCurrentRunningThread();
-			mythread_join(thread, blockedThread);
+			ThreadControlBlock *blockedThread = Dequeue(sem->lsBlockedThreads);
+			StartThread(blockedThread);
+			JoinThread(blockedThread);
 			printf("%s: Unblocked: %c, Threads waiting: %lu\n",sem->name, blockedThread->threadID, sem->lsBlockedThreads->count);
 		}
 	}
@@ -43,22 +42,29 @@ void mysem_up( MySem* sem ) {
 //semaphore's wait operation.
 void mysem_down( MySem* sem ) {
 	DISABLE_INTERRUPTS();
-	ThreadControlBlock *currentThread = GetCurrentRunningThread();
+	ThreadControlBlock *currentThread = GetRunningThread();
 
 	// printf("Wait on semaphore. Updated count: %d\n", sem->count);
 	if(sem->count > 0) {
 		sem->count = sem->count - 1;
+		//sem->LockingThread = currentThread;
 		ENABLE_INTERRUPTS();
 	}
 	else if (sem->count <= 0){
 		if (sem->count < 0){
 			printf("\n BAD THINGS HERE\n");
 		}
-		mythread_block(currentThread);
-		Enqueue(sem->lsBlockedThreads, (void *)currentThread);
+		Enqueue(sem->lsBlockedThreads, currentThread);
+		BlockThread(currentThread);
+
+
+		//Make the locking thread a child of the current thread so that the lockign thread will finish.
+		//mythread_join(currentThread, sem->LockingThread);
+		//mythread_block(currentThread);
+
 		printf("%s: BlockedID: %c, Threads waiting: %lu\n",sem->name, currentThread->threadID, sem->lsBlockedThreads->count);
 		ENABLE_INTERRUPTS();
-		while (currentThread->state == BLOCKED){}
+		while (currentThread->tstate == BLOCKED){}
 		mysem_down(sem);
 	}
 

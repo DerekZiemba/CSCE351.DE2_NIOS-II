@@ -6,14 +6,14 @@
  */
 
 #include "LinkedList.h"
-#include <assert.h>
 #include <stdlib.h>
-#include <stddef.h>
 #include <stdio.h>
 
 /*******************************************************************************************************
 * These are internal macros for the purpose of making code easier to read
 *******************************************************************************************************/
+#define GetByteAt(dataPtr,byteNumber) (uint8_t)*((uintptr_t*)(&(dataPtr)) + byteNumber)
+
 #define bIsListUnlimitedSize(ls) (ls->maxsize==0)
 #define bListHasNodes(ls) (ls->count > 0)
 /*If the pointer is invalid usually these will be wrong*/
@@ -82,21 +82,36 @@ node_t* CreateNewNode(void *data) {
 
 //Gets the node at the index.  Do not free this node without splicing the list.
 node_t* GetNodeAtIndex(LinkedList* ls, const uint32_t index) {
-	if (VerifyViableGetOperation(ls, index)) {
-		node_t* node = NULL;
-		uint32_t i = 1;
-		if (bIsCloserToBeginning(ls, index)) {
-			node = ls->firstNode;
-			for (i = 1; i <= index; i++) {
-				node = node->childNode;
+	if (bIsValidList(ls) && bListHasNodes(ls)) {
+		if (VerifyViableGetOperation(ls, index)) {
+			node_t* node = NULL;
+			uint32_t i = 1;
+			if (bIsCloserToBeginning(ls, index)) {
+				node = ls->firstNode;
+				for (i = 1; i <= index; i++) {
+					node = node->childNode;
+				}
+				return node;
 			}
-			return node;
+			else {
+				node = ls->lastNode;
+				uint32_t stop = ls->count - index;
+				for (i = 1; i <= stop; i++) { node = node->parentNode; }
+				return node;
+			}
 		}
-		else {
-			node = ls->lastNode;
-			uint32_t stop = ls->count - index;
-			for (i = 1; i <= stop; i++) { node = node->parentNode; }
-			return node;
+	}
+	return NULL;
+}
+
+node_t* GetNodeByElement(LinkedList* ls,  void* elementRef) {
+	if (bIsValidList(ls) && bListHasNodes(ls)) {
+		node_t* node = ls->firstNode;
+		while (node != NULL) {
+			if (node->data == elementRef) {
+				return node;
+			}
+			node = node->childNode;
 		}
 	}
 	return NULL;
@@ -167,6 +182,53 @@ node_t* InsertNode(LinkedList* ls, uint32_t index, node_t* newNode) {
 	return newNode;
 }
 
+/*returns index of foundNode from the rootnode*/
+int32_t GetNodeIndexByElement(node_t* rootNode,  void* elementRef) {
+	node_t* node = rootNode;
+	uint32_t index = 0;
+	while (node != NULL) {
+		if (node->data == elementRef) {
+			return index;
+		}
+		node = node->childNode;
+		index++;
+	}
+	return -1;
+}
+
+int32_t GetElementIndex(LinkedList* ls, void* element) {
+	if (bIsValidList(ls) && bListHasNodes(ls)) {
+		return GetNodeIndexByElement(ls->firstNode, element);
+	}
+	return -1;
+}
+
+
+void* PullAndFreeNode(LinkedList* ls, node_t* node){
+	void* elementRef = NULL;
+	if(node != NULL){
+		elementRef = node->data;
+		node = PullNode(ls, node);
+		free(node);
+		node = NULL;
+	}
+	return elementRef;
+}
+
+
+/*******************************************************************************************************
+* Internal List Functions
+*******************************************************************************************************/
+void* m_GetElementPullNodeAndFree(LinkedList* ls, node_t* node){
+	void* elementRef = NULL;
+	if(node != NULL){
+		elementRef = node->data;
+		node = PullNode(ls, node);
+		free(node);
+		node = NULL;
+	}
+	return elementRef;
+}
 
 /*******************************************************************************************************
 * List Functions
@@ -181,38 +243,64 @@ LinkedList* LinkedList_CreateNew(uint32_t max_size) {
 	return ls;
 }
 
+void LinkedList_Free(LinkedList* ls) {
+	node_t* node = ls->firstNode;
+	while(node != NULL){
+		free(node);
+		node = NULL;
+	}
+	free(ls);
+	ls = NULL;
+}
+
 //This creates a new node and adds the value to it
-void InsertValueAtIndex(LinkedList* ls, uint32_t index, void* value) {
+void InsertElementAtIndex(LinkedList* ls, uint32_t index, void* value) {
 	InsertNode(ls, index, CreateNewNode(value));
 }
 
 //This does not remove the value from the list.
-void* GetValueAtIndex(LinkedList* ls, uint32_t index) {
+void* GetElementAtIndex(LinkedList* ls, uint32_t index) {
 	node_t* node = GetNodeAtIndex(ls, index);
 	return node == NULL ? NULL : node->data;
 }
 
-//This removes the value from the list and frees the node.
-void* PullValueAtIndex(LinkedList* ls, uint32_t index) {
-	node_t* node = PullNode(ls, GetNodeAtIndex(ls, index));
-	if (node != NULL) {
-		void* value = node->data;
-		free(node);
-		return value;
+
+
+
+
+void* PullElementByReference(LinkedList* ls, void* element) {
+	if (bIsValidList(ls) && bListHasNodes(ls)) {
+		uint32_t index = GetNodeIndexByElement(ls->firstNode,  element);
+		if(index >= 0) {
+			node_t* node = GetNodeAtIndex(ls, index);
+			return m_GetElementPullNodeAndFree(ls, node);
+		}
 	}
 	return NULL;
 }
 
+
+
+//This removes the value from the list and frees the node.
+void* PullElementAtIndex(LinkedList* ls, uint32_t index) {
+	node_t* node =  GetNodeAtIndex(ls, index);
+	if (node != NULL) {
+		return m_GetElementPullNodeAndFree(ls,node);
+	}
+	return NULL;
+}
+
+
 //Mallocs bytes, be sure to free later.
 uint8_t* LinkedList_ToByteStream(const LinkedList* ls, const int elementByteSize) {
 	if (bIsValidList(ls) && bListHasNodes(ls)) {
-		char* buffer = malloc(ls->count * elementByteSize);
+		uint8_t* buffer = malloc(ls->count * elementByteSize);
 		node_t* node = ls->firstNode;
 		int offset = 0;
 		while (node != NULL) {
 			int byteNum = 0;
 			for (byteNum = 0; byteNum < elementByteSize; byteNum++) {
-				buffer[offset] = (char*)*((&(node->data)) + byteNum);
+				buffer[offset] = GetByteAt(node->data, byteNum);
 				offset++;
 			}
 			node = node->childNode;
@@ -223,36 +311,35 @@ uint8_t* LinkedList_ToByteStream(const LinkedList* ls, const int elementByteSize
 }
 
 /*******************************************************************************************************
-* Queue and Stack Functions
+* Queue Functions
 *******************************************************************************************************/
 //Appends to end of list
+void EnqueueNode(LinkedList* ls, node_t* node) {
+	InsertNode(ls, ls->count, node);
+}
+
+//Pull from start of list.
+node_t* DequeueNode(LinkedList* ls) {
+	return PullNode(ls, GetNodeAtIndex(ls, 0));
+}
+
+node_t* PeekNode(LinkedList* ls) {
+	return GetNodeAtIndex(ls, 0);
+}
+
+//Appends to end of list
 void Enqueue(LinkedList* ls, void* value) {
-	InsertNode(ls, ls->count, CreateNewNode(value));
+	EnqueueNode(ls, CreateNewNode(value));
 }
 
 //Pull from start of list.
 void* Dequeue(LinkedList* ls) {
-	return PullValueAtIndex(ls, 0);
-}
-
-//Push to start of list
-void Push(LinkedList* ls, void* value) {
-	InsertNode(ls, 0, CreateNewNode(value));
-}
-
-//Pull from start of list.
-void* Pop(LinkedList* ls) {
-	return PullValueAtIndex(ls, 0);
+	return PullElementAtIndex(ls, 0);
 }
 
 //View first element
 void* Peek(LinkedList* ls) {
-	return GetValueAtIndex(ls, 0);
-}
-
-//View Last element
-void* PeekTail(LinkedList* ls) {
-	return GetValueAtIndex(ls, ls->count);
+	return GetElementAtIndex(ls, 0);
 }
 
 

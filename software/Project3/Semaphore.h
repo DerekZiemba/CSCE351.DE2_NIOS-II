@@ -10,11 +10,13 @@
 
 #include "LinkedList.h"
 #include <stdint.h>
+#include "ThreadHandler.h"
 
 #define DEBUG_MESSAGES 1
 #define SEM_MAX 10000
 
 typedef struct mysem_t {
+	ThreadControlBlock* LockingThread;
 	LinkedList *lsBlockedThreads;
 	int32_t count;
 	char* name;

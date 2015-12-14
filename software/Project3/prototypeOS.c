@@ -1,10 +1,8 @@
 #include "prototypeOS.h"
 #include "alarm_handler.h"
-#include "thread_handler.h"
+#include "ThreadHandler.h"
 #include "LinkedList.h"
 #include "Semaphore.h"
-
-#define QUANTUM_LENGTH 100 //milliseconds
 
 /* a delay time used to  adjust the frequency of printf messages */
 #define MAX 60000
@@ -15,19 +13,11 @@
 #define BEE_MAX_HONEY_PRODUCTION 15
 #define BEARS_MAX_HONEYPOT_CONSUMPTION 5
 
+static LinkedList lsHoneyPot = {HONEY_POT_CAPACITY,0,NULL,NULL};
 
 static MySem *full = NULL;
 static MySem *notFull = NULL;
 static MySem *mutex = NULL;
-
-LinkedList lsHoneyPot = {HONEY_POT_CAPACITY,0,NULL,NULL};
-
-char GetThreadIdentifierChar(uint32_t n) {
-  if (n < 10) return '0' + n;
-  else if (n < 10 + 26) return 'A' + n - 10;
-  else if (n < 10 + 26 + 26) return 'a' + n - 10 - 26;
-  return 0;
-}
 
 
 void HoneyBee(char threadID) {
@@ -74,41 +64,39 @@ void Bear(char threadID) {
 }
 
 
+void OnInterruptHandler(void* context) {
+	if(GetActiveThreadCount() == 1){
+	    printf("Interrupted by the DE2 timer!\n");
+	}
+}
+
 void prototypeOS(){
-	uint32_t i;
+
+	InitializeThreadHandler();
 
 	full =  mysem_create(0, "full");
 	notFull = mysem_create(30, "notFull");
 	mutex = mysem_create(1, "mutex");
 
-	ThreadControlBlock *thread_pointer;
-	ThreadControlBlock *thisThread = mythread_CreateEmptyThread("M");
-	thisThread->state = RUNNING;
+	uint32_t i;
 
-	uint32_t threadCount = 0;
-	char threadID;
+	ThreadControlBlock *thread_pointer;
 
 	for (i = 0; i < BEARS; i++) {
-		threadCount++;
-		threadID = GetThreadIdentifierChar(threadCount);
-		thread_pointer = mythread_create(threadID, 16000, Bear);
+		thread_pointer = CreateThread(16000, Bear);
 		printf("Created Bear with id: %c\n", thread_pointer->threadID);
-        mythread_start(thread_pointer);
-        mythread_join(thisThread, thread_pointer);
+		StartThread(thread_pointer);
+		JoinThread(thread_pointer);
 	}
     for (i = 0; i < BEES; i++) {
-    	threadCount++;
-    	threadID = GetThreadIdentifierChar(threadCount);
-		thread_pointer = mythread_create(threadID, 16000, HoneyBee);
+		thread_pointer = CreateThread(GetThreadIdentifierChar(threadCount), 16000, HoneyBee);
 		printf("Created HoneyBee with id: %c\n", thread_pointer->threadID);
-        mythread_start(thread_pointer);
-        mythread_join(thisThread, thread_pointer);
+		StartThread(thread_pointer);
+		JoinThread(thread_pointer);
     }
     
-    if ( start_alarm_succeed(QUANTUM_LENGTH) )
-        printf ("Start the alarm successfully\n");
-    else
-        printf ("Unable to start the alarm\n");
+
+    CheckForError(start_alarm(QUANTUM_LENGTH, OnInterruptHandler), "Unable to start the alarm\n");
 
     /* an endless while loop */
     while (1){
@@ -122,7 +110,5 @@ void prototypeOS(){
     }
 }
 
-int main(){
-	prototypeOS();
-    return 0;
-}
+
+
