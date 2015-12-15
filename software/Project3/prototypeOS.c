@@ -5,8 +5,8 @@
 #include "Semaphore.h"
 
 /* a delay time used to  adjust the frequency of printf messages */
-#define MAX 60000
-#define HONEY_DELAY MAX/2
+#define MAX 40000
+//#define HONEY_DELAY MAX/2
 #define BEES 10
 #define BEARS 1
 #define HONEY_POT_CAPACITY 30
@@ -29,7 +29,7 @@ void HoneyBee(char threadID) {
 		mysem_down(mutex);
 
 		printf("Honeybee %c, makes deposit #%02lu into ", threadID, i);
-		EnqueueValue(&lsHoneyPot, (void*)(intptr_t) threadID);
+		EnqueueElement(&lsHoneyPot, (void*)(intptr_t) threadID);
 
 		char* byteStream = (char*) LinkedList_ToByteStream(&lsHoneyPot, sizeof(char));
 		printf("Honeypot(%lu): %.*s\n", lsHoneyPot.count, (int)lsHoneyPot.count, byteStream);
@@ -50,9 +50,9 @@ void Bear(char threadID) {
 		 mysem_down(full);
 		 mysem_down(mutex);
 
-		 printf("This is bear %c and it's his %lu springtime.  Watch as he snarfs down a pot of honey. \n", threadID, i);
+		 printf("This is bear %c and he is %lu years old.  Watch as he snarfs down a pot of honey. \n", threadID, i);
 		 while(lsHoneyPot.count > 0){
-			 char atePortionFromHoneyBee = DequeueValue(&lsHoneyPot);
+			 char atePortionFromHoneyBee = DequeueElement(&lsHoneyPot);
 			 char* byteStream =(char*) LinkedList_ToByteStream(&lsHoneyPot, sizeof(char));
 			 printf("Ate: %c, Honeypot(%lu) Left: %.*s\n", atePortionFromHoneyBee,lsHoneyPot.count, lsHoneyPot.count, byteStream);
 			 free(byteStream);
@@ -96,15 +96,8 @@ void prototypeOS(){
 		JoinThread(thread);
 	}
 
-//    for (i = 0; i < BEES; i++) {
-//		JoinThread(&producers[i]);
-//    }
-//	for (i = 0; i < BEARS; i++) {
-//		JoinThread(&constumers[i]);
-//	}
 
-
-    CheckForError(start_alarm(QUANTUM_LENGTH, OnInterruptHandler), "Unable to start the alarm\n");
+   start_alarm(1000, OnInterruptHandler);
 
     /* an endless while loop */
 uint8_t deleted = 0;
@@ -112,7 +105,7 @@ uint8_t deleted = 0;
         printf ("This is the OS primitive for my exciting CSE351 course projects!\n");
         
         /* delay printf for a while */
-        for (i = 0; i < 30*MAX; i++);
+        for (i = 0; i < 10*MAX; i++);
         if(GetActiveThreadCount() == 1 && !deleted){
         	deleted++;
             mysem_delete(full);

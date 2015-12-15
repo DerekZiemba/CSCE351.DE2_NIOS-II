@@ -71,7 +71,7 @@ uint8_t _VerifyViableGetOperation(LinkedList* ls, uint32_t index) {
 /*******************************************************************************************************
 * Node Functions
 *******************************************************************************************************/
-node_t* CreateNewNode(void *data) {
+node_t* Node_CreateNew(void *data) {
 	node_t  *n = (node_t*) malloc(sizeof(node_t));
 	CHECKMALLOC(n,"LinkedList Node");
 	n->data = data;
@@ -81,31 +81,29 @@ node_t* CreateNewNode(void *data) {
 }
 
 //Gets the node at the index.  Do not free this node without splicing the list.
-node_t* GetNodeAtIndex(LinkedList* ls, const uint32_t index) {
-	if (bIsValidList(ls) && bListHasNodes(ls)) {
-		if (VerifyViableGetOperation(ls, index)) {
-			node_t* node = NULL;
-			uint32_t i = 1;
-			if (bIsCloserToBeginning(ls, index)) {
-				node = ls->firstNode;
-				for (i = 1; i <= index; i++) {
-					node = node->childNode;
-				}
-				return node;
+node_t* Node_GetNodeAtIndex(LinkedList* ls, const uint32_t index) {
+	if (VerifyViableGetOperation(ls, index)) {
+		node_t* node = NULL;
+		uint32_t i = 1;
+		if (bIsCloserToBeginning(ls, index)) {
+			node = ls->firstNode;
+			for (i = 1; i <= index; i++) {
+				node = node->childNode;
 			}
-			else {
-				node = ls->lastNode;
-				uint32_t stop = ls->count - index;
-				for (i = 1; i <= stop; i++) { node = node->parentNode; }
-				return node;
-			}
+			return node;
+		}
+		else {
+			node = ls->lastNode;
+			uint32_t stop = ls->count - index;
+			for (i = 1; i <= stop; i++) { node = node->parentNode; }
+			return node;
 		}
 	}
 	return NULL;
 }
 
-node_t* GetNodeByElement(LinkedList* ls,  void* elementRef) {
-	if (bIsValidList(ls) && bListHasNodes(ls)) {
+node_t* Node_GetNodeByElement(LinkedList* ls,  void* elementRef) {
+	if (VerifyViableGetOperation(ls, 0)) {
 		node_t* node = ls->firstNode;
 		while (node != NULL) {
 			if (node->data == elementRef) {
@@ -118,8 +116,8 @@ node_t* GetNodeByElement(LinkedList* ls,  void* elementRef) {
 }
 
 //Removes the node and splices the list. Remember to free the node if no longer used.
-node_t* PullNode(LinkedList* ls, node_t* node) {
-	if (node != NULL) {
+node_t* Node_RemoveNode(LinkedList* ls, node_t* node) {
+	if (node != NULL && VerifyViableGetOperation(ls, 0)) {
 		if (ls->count > 1) {
 			if (node->parentNode == NULL) { //If this is the first node
 				if (node->childNode != NULL) { //And it has a child
@@ -149,7 +147,7 @@ node_t* PullNode(LinkedList* ls, node_t* node) {
 }
 
 
-node_t* InsertNode(LinkedList* ls, uint32_t index, node_t* newNode) {
+node_t* Node_InsertNode(LinkedList* ls, uint32_t index, node_t* newNode) {
 	if (VerifyViableInsertOperation(ls, index)) {
 		//First things first, wipe out any references to any other parent or child
 		newNode->parentNode = NULL;
@@ -171,7 +169,7 @@ node_t* InsertNode(LinkedList* ls, uint32_t index, node_t* newNode) {
 		}
 		else {
 			//He's gonna get pushed down 1 slot.
-			node_t* victim = GetNodeAtIndex(ls,index);
+			node_t* victim = Node_GetNodeAtIndex(ls,index);
 			newNode->parentNode = victim->parentNode;
 			newNode->parentNode->childNode = newNode;
 			newNode->childNode = victim;
@@ -182,67 +180,42 @@ node_t* InsertNode(LinkedList* ls, uint32_t index, node_t* newNode) {
 	return newNode;
 }
 
-/*returns index of foundNode from the rootnode*/
-int32_t GetNodeIndexByElement(node_t* rootNode,  void* elementRef) {
-	node_t* node = rootNode;
-	uint32_t index = 0;
-	while (node != NULL) {
-		if (node->data == elementRef) {
-			return index;
-		}
-		node = node->childNode;
-		index++;
-	}
-	return -1;
-}
-
-int32_t GetElementIndex(LinkedList* ls, void* element) {
-	if (bIsValidList(ls) && bListHasNodes(ls)) {
-		return GetNodeIndexByElement(ls->firstNode, element);
-	}
-	return -1;
-}
-
-
-void* PullAndFreeNode(LinkedList* ls, node_t* node){
-	void* elementRef = NULL;
-	if(node != NULL){
-		elementRef = node->data;
-		node = PullNode(ls, node);
-		free(node);
-		node = NULL;
-	}
-	return elementRef;
-}
 
 
 /*******************************************************************************************************
-* Internal List Functions
+* Internal Node functions that the List implementation already exposes in some way.
 *******************************************************************************************************/
-void* m_GetElementPullNodeAndFree(LinkedList* ls, node_t* node){
+/*returns index of foundNode from the rootnode*/
+int32_t Node_GetElementIndex(LinkedList* ls, void* elementRef)  {
+	if (VerifyViableGetOperation(ls, 0)) {
+		node_t* node = ls->firstNode;
+		uint32_t index = 0;
+		while (node != NULL) {
+			if (node->data == elementRef) {
+				return index;
+			}
+			node = node->childNode;
+			index++;
+		}
+	}
+	return -1;
+}
+
+void* Node_RemoveAndFreeNode(LinkedList* ls, node_t* node){
 	void* elementRef = NULL;
 	if(node != NULL){
 		elementRef = node->data;
-		node = PullNode(ls, node);
+		node = Node_RemoveNode(ls, node);
 		free(node);
 		node = NULL;
 	}
 	return elementRef;
 }
+
 
 /*******************************************************************************************************
 * List Functions
 *******************************************************************************************************/
-LinkedList* LinkedList_CreateNew(uint32_t max_size) {
-	LinkedList *ls = malloc(sizeof(LinkedList));
-	CHECKMALLOC(ls,"LinkedList");
-	ls->maxsize = max_size;
-	ls->count = 0;
-	ls->firstNode = NULL;
-	ls->lastNode = NULL;
-	return ls;
-}
-
 void LinkedList_Free(LinkedList* ls) {
 	node_t* node = ls->firstNode;
 	while(node != NULL){
@@ -253,39 +226,14 @@ void LinkedList_Free(LinkedList* ls) {
 	ls = NULL;
 }
 
-//This creates a new node and adds the value to it
-void InsertElementAtIndex(LinkedList* ls, uint32_t index, void* value) {
-	InsertNode(ls, index, CreateNewNode(value));
-}
-
-//This does not remove the value from the list.
-void* GetElementAtIndex(LinkedList* ls, uint32_t index) {
-	node_t* node = GetNodeAtIndex(ls, index);
-	return node == NULL ? NULL : node->data;
-}
-
-
-
-void* PullElementByReference(LinkedList* ls, void* element) {
-	if (bIsValidList(ls) && bListHasNodes(ls)) {
-		uint32_t index = GetNodeIndexByElement(ls->firstNode,  element);
-		if(index >= 0) {
-			node_t* node = GetNodeAtIndex(ls, index);
-			return m_GetElementPullNodeAndFree(ls, node);
-		}
-	}
-	return NULL;
-}
-
-
-
-//This removes the value from the list and frees the node.
-void* PullElementAtIndex(LinkedList* ls, uint32_t index) {
-	node_t* node =  GetNodeAtIndex(ls, index);
-	if (node != NULL) {
-		return m_GetElementPullNodeAndFree(ls,node);
-	}
-	return NULL;
+LinkedList* LinkedList_CreateNew(uint32_t max_size) {
+	LinkedList *ls = malloc(sizeof(LinkedList));
+	CHECKMALLOC(ls,"LinkedList");
+	ls->maxsize = max_size;
+	ls->count = 0;
+	ls->firstNode = NULL;
+	ls->lastNode = NULL;
+	return ls;
 }
 
 
@@ -308,49 +256,98 @@ uint8_t* LinkedList_ToByteStream(const LinkedList* ls, const int elementByteSize
 	return NULL;
 }
 
+
+//This creates a new node and adds the value to it
+void LinkedList_InsertElementAtIndex(LinkedList* ls, uint32_t index, void* value) {
+	Node_InsertNode(ls, index, Node_CreateNew(value));
+}
+
+
+//This does not remove the value from the list.
+void* LinkedList_GetElementAtIndex(LinkedList* ls, uint32_t index) {
+	node_t* node = Node_GetNodeAtIndex(ls, index);
+	return node == NULL ? NULL : node->data;
+}
+
+/*returns index of foundNode from the rootnode*/
+int32_t LinkedList_GetElementIndex(LinkedList* ls, void* elementRef)  {
+	return Node_GetElementIndex(ls,elementRef);
+}
+
+
+void* LinkedList_RemoveElement(LinkedList* ls, void* element) {
+	return Node_RemoveAndFreeNode(ls, Node_GetNodeByElement(ls, element));
+}
+
+
+//This removes the value from the list and frees the node.
+void* LinkedList_RemoveElementAtIndex(LinkedList* ls, uint32_t index) {
+	return Node_RemoveAndFreeNode(ls, Node_GetNodeAtIndex(ls, index));
+}
+
+
 /*******************************************************************************************************
-* Queue Functions
+* Convenience Functions
 *******************************************************************************************************/
 //Appends to end of list
-void EnqueueNode(LinkedList* ls, node_t* node) {
-	InsertNode(ls, ls->count, node);
+void EnqueueElement(LinkedList* ls, void* element) {
+	Node_InsertNode(ls, ls->count, Node_CreateNew(element));
 }
 
 //Pull from start of list.
-node_t* DequeueNode(LinkedList* ls) {
-	return PullNode(ls, GetNodeAtIndex(ls, 0));
-}
-
-node_t* PeekNode(LinkedList* ls) {
-	return GetNodeAtIndex(ls, 0);
-}
-
-
-
-//Appends to end of list
-void EnqueueValue(LinkedList* ls, void* value) {
-	InsertNode(ls, ls->count, CreateNewNode(value));
-}
-
-//Pull from start of list.
-void* DequeueValue(LinkedList* ls) {
-	return PullElementAtIndex(ls, 0);
+void* DequeueElement(LinkedList* ls) {
+	return LinkedList_RemoveElementAtIndex(ls, 0);
 }
 
 //Push onto front of list
-void PushValue(LinkedList* ls, void* value) {
-	InsertNode(ls, 0, CreateNewNode(value));
-}
-
-//Remove all references to the value in the list regardless of position
-void* RemoveValue(LinkedList* ls, void* value) {
-	InsertNode(ls, 0, CreateNewNode(value));
+void PushElement(LinkedList* ls, void* element) {
+	Node_InsertNode(ls, 0, Node_CreateNew(element));
 }
 
 //View first element
-void* PeekValue(LinkedList* ls) {
-	return GetElementAtIndex(ls, 0);
+void* PeekElement(LinkedList* ls) {
+	return LinkedList_GetElementAtIndex(ls, 0);
 }
+
+//Remove all references to the value in the list regardless of position
+void* RemoveElement(LinkedList* ls, void* element) {
+	void* foundValue = NULL;
+	if (VerifyViableGetOperation(ls, 0)) {
+		node_t* node = ls->firstNode;
+		while (node != NULL) {
+			node = node->childNode;
+			if (node->parentNode->data == element) {
+				foundValue = Node_RemoveAndFreeNode(ls,node->parentNode);
+			}
+		}
+	}
+	return foundValue;
+}
+
+/*The first element goes to the end and the second element becomes the first. Returns the new first element*/
+void* RotateWrapAndPeek(LinkedList* ls) {
+	if (VerifyViableGetOperation(ls, 1)) { //Should be at least 2 nodes
+
+		node_t* oldFirstNode = ls->firstNode;
+		ls->firstNode = oldFirstNode->childNode;
+		ls->firstNode->parentNode = NULL;
+
+		ls->lastNode->childNode = oldFirstNode;
+		oldFirstNode->parentNode = ls->lastNode;
+		ls->lastNode = oldFirstNode;
+		oldFirstNode->childNode = NULL;
+
+		return ls->firstNode;
+	}
+	return NULL;
+}
+
+
+
+
+
+
+
 
 
 

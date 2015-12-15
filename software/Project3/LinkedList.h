@@ -27,46 +27,60 @@ typedef struct LinkedList_t {
 	node_t*		lastNode;
 } LinkedList;
 
-LinkedList* LinkedList_CreateNew(uint32_t max_size);
+
+/*******************************************************************************************************
+* Node Functions.
+*******************************************************************************************************/
+node_t* 	Node_CreateNew(void *data);
+
+			/* Inserts the node at the child that is index away from the first element. */
+node_t* 	Node_InsertNode(LinkedList* ls, uint32_t index, node_t* newNode);
+
+			/*Returns the node at the index given from the firstnode in the list. */
+node_t* 	Node_GetNodeAtIndex(LinkedList* ls, const uint32_t index);
+			/* Gets the first child node that matches the element pointer.  */
+node_t* 	Node_GetNodeByElement(LinkedList* ls,  void* elementRef);
+
+			/* Removes the node, splices the parent and child, and returns the removed node.  Node must be later freed.  */
+node_t* 	Node_RemoveNode(LinkedList* ls, node_t* node);
+
+
+/*******************************************************************************************************
+* List FUnctions
+*******************************************************************************************************/
 void 		LinkedList_Free(LinkedList* ls);
-uint8_t* 	LinkedList_ToArray(const LinkedList* ls, const int elementByteSize);
-
-node_t* 	CreateNewNode(void *data);
-node_t* 	GetNodeAtIndex(LinkedList* ls, const uint32_t index);
-node_t* 	PullNode(LinkedList* ls, node_t* node);
-node_t* 	InsertNode(LinkedList* ls, uint32_t index, node_t* newNode);
-node_t* 	GetNodeByElement(LinkedList* ls, void* element);
-
-int32_t 	GetNodeIndexByElement(node_t* rootNode,  void* elementRef);
-int32_t		GetElementIndex(LinkedList* ls, void* element);
-
 LinkedList* LinkedList_CreateNew(uint32_t max_size);
-void 		LinkedList_Free(LinkedList* ls);
+
+			/*this needs more testing... It works for char's but I think that's it.  Basically allows you to get an array of chars*/
 uint8_t* 	LinkedList_ToByteStream(const LinkedList* ls, const int elementByteSize);
 
-void* 		PullAndFreeNode(LinkedList* ls, node_t* node);
+void		LinkedList_InsertElementAtIndex(LinkedList* ls, uint32_t index, void* value);
 
+			/*Returns a reference to the element at the specified index*/
+void*		LinkedList_GetElementAtIndex(LinkedList* ls, uint32_t index); //The value will remains in the list
+			/*Gets the index of an element*/
+int32_t		LinkedList_GetElementIndex(LinkedList* ls, void* element);
 
+			/*Removes the first instance of the element*/
+void* 		LinkedList_RemoveElement(LinkedList* ls, void* element);
+void*		LinkedList_RemoveElementAtIndex(LinkedList* ls, uint32_t index);
 
-void		InsertElementAtIndex(LinkedList* ls, uint32_t index, void* value);
-void*		GetElementAtIndex(LinkedList* ls, uint32_t index); //The value will remains in the list
-void*		PullElementAtIndex(LinkedList* ls, uint32_t index); 	//Deleted the node and returns the value contained in it.
+/*******************************************************************************************************
+* Convenience Functions
+*******************************************************************************************************/
+			/*Inserts the element at the end of the list*/
+void 		EnqueueElement(LinkedList* ls, void* element);
+			/*Removes the element from the front of the list*/
+void* 		DequeueElement(LinkedList* ls);
+			/*Removes the element from the front of the list*/
+void 		PushElement(LinkedList* ls, void* element);
+			/*Gets the element from the front of the list*/
+void* 		PeekElement(LinkedList* ls);
+			/*Removes all instances of the element.  Returns the element if successful.*/
+void* 		RemoveElement(LinkedList* ls, void* element);
 
-void* 		PullElementByReference(LinkedList* ls, void* element);
-void* 		PullElementByValue(LinkedList* ls, void* element, uint32_t elementByteSize);
-
-
-void 		EnqueueNode(LinkedList* ls, node_t* node);
-node_t* 	DequeueNode(LinkedList* ls);
-node_t* 	PeekNode(LinkedList* ls);
-
-void		EnqueueValue(LinkedList* ls, void* value); //Automatically Allocates node. Returns the newly allocated node.
-void*		DequeueValue(LinkedList *q); //Automatically Frees node. Returns ptr to stored object
-void*		PeekValue(LinkedList *q); //Returns a reference to the next element to that would be normally dequeued
-
-
-
-
+/*The first element goes to the end and the second element becomes the first. Returns the new first element*/
+void* 		RotateWrapAndPeek(LinkedList* ls);
 
 
 #endif /* LINKEDLIST_H_ */

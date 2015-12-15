@@ -11,6 +11,12 @@
 #include "prototypeOS.h"
 #include "LinkedList.h"
 
+#define FORFEIT_TIME_SLICE() {		\
+	uint32_t sp; 					\
+	NIOS2_READ_SP(sp); 				\
+	ThreadScheduler((void*)sp);		\
+}
+
 /* possible thread states */
 enum ThreadState {NEW, READY, RUNNING, BLOCKED, DONE, NUM_TSTATES};
 
@@ -22,8 +28,8 @@ typedef struct ThreadControlBlock {
     char threadID;
     uint32_t *sp;
     uint32_t *stack;
-    struct ThreadControlBlock* parentThread;
-    LinkedList*  joinedThreads;
+//    struct ThreadControlBlock* parentThread;
+//    LinkedList*  joinedThreads;
 
 } ThreadControlBlock;
 
@@ -46,6 +52,6 @@ void CleanupThread();
 
 void *ThreadScheduler(void *context);
 
-
+void ForfeitTimeSlot(ThreadControlBlock *thread);
 
 #endif /* THREADHANDLER_H_ */

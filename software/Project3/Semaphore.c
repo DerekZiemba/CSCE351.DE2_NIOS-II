@@ -24,51 +24,52 @@ MySem* mysem_create(int32_t count, char* name) {
 
 // semaphore's signal operation.
 void mysem_up( MySem* sem ) {
-	DISABLE_INTERRUPTS();
+	//DISABLE_INTERRUPTS();
 	sem->count = sem->count + 1;
 
 	ThreadControlBlock *currentThread = GetRunningThread();
-	printf("---> MySem_Up on %s semaphore By %s_%c, . Updated count: %d\n", sem->name,currentThread->threadName, currentThread->threadID, sem->count);
+	//printf("---> MySem_Up on %s semaphore By %s_%c, . Updated count: %d\n", sem->name,currentThread->threadName, currentThread->threadID, sem->count);
 
 	if (sem->count > 0) {
 
 		while(sem->lsBlockedThreads->count > 0){
-			ThreadControlBlock *blockedThread = DequeueValue(sem->lsBlockedThreads);
+			ThreadControlBlock *blockedThread = DequeueElement(sem->lsBlockedThreads);
 			StartThread(blockedThread);
 			printf("-------> Semaphore %s Unblocked: %s_%c. Threads waiting: %lu\n",sem->name,blockedThread->threadName, blockedThread->threadID, sem->lsBlockedThreads->count);
 		}
 	}
-	ENABLE_INTERRUPTS();
+	//ENABLE_INTERRUPTS();
 }
 
 //semaphore's wait operation.
 void mysem_down( MySem* sem ) {
-	DISABLE_INTERRUPTS();
+	//DISABLE_INTERRUPTS();
 	ThreadControlBlock *currentThread = GetRunningThread();
 
 	 //printf("Wait on semaphore. Updated count: %d\n", sem->count);
-	printf("---> MySem_Down on %s semaphore By %s_%c. Updated count: %d\n", sem->name,currentThread->threadName, currentThread->threadID, sem->count);
+	//printf("---> MySem_Down on %s semaphore By %s_%c. Updated count: %d\n", sem->name,currentThread->threadName, currentThread->threadID, sem->count);
 	if(sem->count > 0) {
 		sem->count = sem->count - 1;
 		//sem->LockingThread = currentThread;
-		ENABLE_INTERRUPTS();
+	//	ENABLE_INTERRUPTS();
 	}
 	else if (sem->count <= 0){
 		if (sem->count < 0){
 			printf("\n BAD THINGS HERE\n");
 		}
-		EnqueueValue(sem->lsBlockedThreads, currentThread);
-		//printf("-------> Semaphore %s: BlockedID: %s_%c. Threads waiting: %lu\n",sem->name,currentThread->threadName, currentThread->threadID, sem->lsBlockedThreads->count);
+		EnqueueElement(sem->lsBlockedThreads, currentThread);
+		printf("-------> Semaphore %s: BlockedID: %s_%c. Threads waiting: %lu\n",sem->name,currentThread->threadName, currentThread->threadID, sem->lsBlockedThreads->count);
 
 		BlockThread(currentThread);
 
 		//Make the locking thread a child of the current thread so that the lockign thread will finish.
 		//mythread_join(currentThread, sem->LockingThread);
-		//mythread_block(currentThread);
 
-		ENABLE_INTERRUPTS();
-		while (currentThread->tstate == BLOCKED){}
-		//mysem_down(sem);
+	//	ENABLE_INTERRUPTS();
+		while (currentThread->tstate == BLOCKED){
+			//FORFEIT_TIME_SLICE();
+		}
+		mysem_down(sem);
 	}
 
 }
@@ -76,11 +77,11 @@ void mysem_down( MySem* sem ) {
 void mysem_delete( MySem* sem ) {
 	if(sem != NULL){
 		printf("Deleting semaphore.\n");
-		DISABLE_INTERRUPTS();
+	//	DISABLE_INTERRUPTS();
 		free(sem->lsBlockedThreads);
 		free(sem);
 		sem = NULL;
-		ENABLE_INTERRUPTS();
+	//	ENABLE_INTERRUPTS();
 	}
 }
 
