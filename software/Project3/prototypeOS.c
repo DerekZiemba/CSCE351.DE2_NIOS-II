@@ -3,9 +3,11 @@
 #include "ThreadHandler.h"
 #include "LinkedList.h"
 #include "Semaphore.h"
+#include <sys/alt_alarm.h>
+
 
 /* a delay time used to  adjust the frequency of printf messages */
-#define MAX 40000
+#define MAX 60000
 //#define HONEY_DELAY MAX/2
 #define BEES 10
 #define BEARS 1
@@ -34,18 +36,18 @@ void HoneyBee(char threadID) {
 		mysem_down(notFull);
 		mysem_down(mutex);
 
-		printf("Honeybee %c, makes deposit #%02lu into ", threadID, i);
+		printf("\nHoneyBee_%c makes deposit #%02lu into ", threadID, i);
 		EnqueueElement(&lsHoneyPot, (void*)(intptr_t) threadID);
 
 		char* byteStream = (char*) LinkedList_ToArray(&lsHoneyPot, 1);
-		printf("Honeypot(%lu): %.*s\n", lsHoneyPot.count, (int)lsHoneyPot.count, byteStream);
+		printf("Honeypot(%lu): %.*s ", lsHoneyPot.count, (int)lsHoneyPot.count, byteStream);
 		free(byteStream);
 
 		if(lsHoneyPot.count>= HONEY_POT_CAPACITY){
 			mysem_up(full);
 		}
 		 mysem_up(mutex);
-		 for (j = 0; j < MAX; j++);
+		 for (j = 0; j < MAX ; j++);
 	}
 }
 
@@ -56,13 +58,14 @@ void Bear(char threadID) {
 		 mysem_down(full);
 		 mysem_down(mutex);
 
-		 printf("This is bear %c and he is %lu years old.  Watch as he snarfs down a pot of honey. \n", threadID, i);
+		 printf("\nBear_%c wakes up to eat his %lu Honeypot.  Watch as he snarfs down a pot of honey.", threadID, i);
 		 while(lsHoneyPot.count > 0){
 			 char atePortionFromHoneyBee = DequeueElement(&lsHoneyPot);
 			 char* byteStream = (char*)  LinkedList_ToArray(&lsHoneyPot, 1);
-			 printf("Ate: %c, Honeypot(%lu) Left: %.*s\n", atePortionFromHoneyBee,lsHoneyPot.count, lsHoneyPot.count, byteStream);
+			 printf("\n Bear ate: %c, Honeypot(%lu) Left: %.*s", atePortionFromHoneyBee,lsHoneyPot.count, lsHoneyPot.count, byteStream);
 			 free(byteStream);
-			 for (j = 0; j < MAX; j++);
+
+			 for (j = 0; j < MAX ; j++);
 
 		 }
 		 notFull->count=29;
@@ -72,9 +75,10 @@ void Bear(char threadID) {
 }
 
 
+
 void OnInterruptHandler(void* context) {
 	if(GetActiveThreadCount() == 1){
-	    printf("Interrupted by the DE2 timer!\n");
+	    printf("\nInterrupted by the DE2 timer!\n");
 	}
 }
 
@@ -109,10 +113,10 @@ void prototypeOS(){
     /* an endless while loop */
 uint8_t deleted = 0;
     while (1){
-        printf ("This is the OS primitive for my exciting CSE351 course projects!\n");
+        printf ("\nThis is the prototypeOS for my exciting CSE351 course projects! ");
         
         /* delay printf for a while */
-        for (i = 0; i < 10*MAX; i++);
+        for (i = 0; i < 5*MAX; i++);
         if(GetActiveThreadCount() == 1 && !deleted){
         	deleted++;
             mysem_delete(full);

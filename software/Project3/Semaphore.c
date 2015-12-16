@@ -27,7 +27,7 @@ void mysem_up( MySem* sem ) {
 	//DISABLE_INTERRUPTS();
 	sem->count = sem->count + 1;
 
-	ThreadControlBlock *currentThread = GetRunningThread();
+	//ThreadControlBlock *currentThread = GetRunningThread();
 	//printf("---> MySem_Up on %s semaphore By %s_%c, . Updated count: %d\n", sem->name,currentThread->threadName, currentThread->threadID, sem->count);
 
 	if (sem->count > 0) {
@@ -50,7 +50,6 @@ void mysem_down( MySem* sem ) {
 	//printf("---> MySem_Down on %s semaphore By %s_%c. Updated count: %d\n", sem->name,currentThread->threadName, currentThread->threadID, sem->count);
 	if(sem->count > 0) {
 		sem->count = sem->count - 1;
-		//sem->LockingThread = currentThread;
 	//	ENABLE_INTERRUPTS();
 	}
 	else if (sem->count <= 0){
@@ -65,7 +64,6 @@ void mysem_down( MySem* sem ) {
 		//Make the locking thread a child of the current thread so that the lockign thread will finish.
 		//mythread_join(currentThread, sem->LockingThread);
 
-	//	ENABLE_INTERRUPTS();
 		while (currentThread->tstate == BLOCKED){
 			//FORFEIT_TIME_SLICE();
 		}

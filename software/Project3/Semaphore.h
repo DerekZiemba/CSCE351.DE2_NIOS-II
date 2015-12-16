@@ -16,7 +16,6 @@
 #define SEM_MAX 10000
 
 typedef struct mysem_t {
-	ThreadControlBlock* LockingThread;
 	LinkedList *lsBlockedThreads;
 	int32_t count;
 	char* name;

@@ -102,7 +102,7 @@ void StartThread(ThreadControlBlock *thread){
 	}
 	else {
 		printf("!!!!!ROGUE THREAD!!!!!!!!");
-		while(1){};
+		//while(1){};
 	}
 	CONDITIONALLY_ENABLE_INTERRUPTS
 }
@@ -131,6 +131,7 @@ void BlockThread(ThreadControlBlock* thread){
 
 void TerminateThread(ThreadControlBlock *thread){
 	char threadID = thread->threadID;
+	thread->tstate = TERMINATED;
 	RemoveElement(lsActiveThreads, thread);
 	printf("Terminating thread %c\n", threadID);
 }
@@ -216,6 +217,7 @@ void *ThreadScheduler(void *context){
 		RunningThread = MainThread;
 	}
 
+	printf(" | %s_%c -->  %s_%c | ", currentThread->threadName, currentThread->threadID, RunningThread->threadName, RunningThread->threadID);
 	CONDITIONALLY_ENABLE_INTERRUPTS
 	return context;
 }

@@ -2,7 +2,7 @@
 #include <sys/alt_alarm.h>
 #include "alarm_handler.h"
 
-#define QUANTUM_LENGTH 100 //milliseconds
+#define QUANTUM_LENGTH 200 //milliseconds
 
 /* The resolution is 100ms but it accepts input in single millis */
 #define ALARMTICKS(x) ((alt_ticks_per_second()*x)/1000)
@@ -31,7 +31,7 @@ void (*onInterruptCallback) (void* context);
 uint32_t myinterrupt_handler(void* context){
     alarmflag = 1;
     counter++;
-    if(counter % (virtualTickRate/100) == 0 ){
+    if(counter % (virtualTickRate/QUANTUM_LENGTH) == 0 ){
     	onInterruptCallback(context);
     	counter = 0;
     }
