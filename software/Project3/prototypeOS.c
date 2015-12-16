@@ -7,7 +7,7 @@
 
 
 /* a delay time used to  adjust the frequency of printf messages */
-#define MAX 60000
+#define MAX 70000
 //#define HONEY_DELAY MAX/2
 #define BEES 10
 #define BEARS 1
@@ -36,11 +36,10 @@ void HoneyBee(char threadID) {
 		mysem_down(notFull);
 		mysem_down(mutex);
 
-		printf("\nHoneyBee_%c makes deposit #%02lu into ", threadID, i);
 		EnqueueElement(&lsHoneyPot, (void*)(intptr_t) threadID);
 
 		char* byteStream = (char*) LinkedList_ToArray(&lsHoneyPot, 1);
-		printf("Honeypot(%lu): %.*s ", lsHoneyPot.count, (int)lsHoneyPot.count, byteStream);
+		printf("\n  HoneyBee_%c makes deposit #%02lu into the Honeypot(%02lu):     %-35.*s", threadID, i, lsHoneyPot.count, (int)lsHoneyPot.count, byteStream);
 		free(byteStream);
 
 		if(lsHoneyPot.count>= HONEY_POT_CAPACITY){
@@ -62,7 +61,7 @@ void Bear(char threadID) {
 		 while(lsHoneyPot.count > 0){
 			 char atePortionFromHoneyBee = DequeueElement(&lsHoneyPot);
 			 char* byteStream = (char*)  LinkedList_ToArray(&lsHoneyPot, 1);
-			 printf("\n Bear ate: %c, Honeypot(%lu) Left: %.*s", atePortionFromHoneyBee,lsHoneyPot.count, lsHoneyPot.count, byteStream);
+			 printf("\nBear_%c (#%02lu yrs old) eats Bee_%c's Honey! Honeypot(%02lu):    %-35.*s", threadID,i, atePortionFromHoneyBee,lsHoneyPot.count, lsHoneyPot.count, byteStream);
 			 free(byteStream);
 
 			 for (j = 0; j < MAX ; j++);

@@ -217,7 +217,10 @@ void *ThreadScheduler(void *context){
 		RunningThread = MainThread;
 	}
 
-	printf(" | %s_%c -->  %s_%c | ", currentThread->threadName, currentThread->threadID, RunningThread->threadName, RunningThread->threadID);
+
+	printf(" | %s_%c:%s --> %s_%c:%s | ",
+			currentThread->threadName, currentThread->threadID,
+			RunningThread->threadName, RunningThread->threadID);
 	CONDITIONALLY_ENABLE_INTERRUPTS
 	return context;
 }
