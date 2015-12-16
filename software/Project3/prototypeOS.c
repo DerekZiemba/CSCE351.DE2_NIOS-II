@@ -20,6 +20,12 @@ static MySem *notFull = NULL;
 static MySem *mutex = NULL;
 
 
+uint8_t bCheckInterruptsEnabled(){
+	uint8_t status = 0;
+	NIOS2_READ_STATUS(status);
+	return status;
+}
+
 void HoneyBee(char threadID) {
 	uint32_t i, j;
 
@@ -31,7 +37,7 @@ void HoneyBee(char threadID) {
 		printf("Honeybee %c, makes deposit #%02lu into ", threadID, i);
 		EnqueueElement(&lsHoneyPot, (void*)(intptr_t) threadID);
 
-		char* byteStream = (char*) LinkedList_ToByteStream(&lsHoneyPot, sizeof(char));
+		char* byteStream = (char*) LinkedList_ToArray(&lsHoneyPot, 1);
 		printf("Honeypot(%lu): %.*s\n", lsHoneyPot.count, (int)lsHoneyPot.count, byteStream);
 		free(byteStream);
 
@@ -53,7 +59,7 @@ void Bear(char threadID) {
 		 printf("This is bear %c and he is %lu years old.  Watch as he snarfs down a pot of honey. \n", threadID, i);
 		 while(lsHoneyPot.count > 0){
 			 char atePortionFromHoneyBee = DequeueElement(&lsHoneyPot);
-			 char* byteStream =(char*) LinkedList_ToByteStream(&lsHoneyPot, sizeof(char));
+			 char* byteStream = (char*)  LinkedList_ToArray(&lsHoneyPot, 1);
 			 printf("Ate: %c, Honeypot(%lu) Left: %.*s\n", atePortionFromHoneyBee,lsHoneyPot.count, lsHoneyPot.count, byteStream);
 			 free(byteStream);
 			 for (j = 0; j < MAX; j++);
@@ -71,6 +77,7 @@ void OnInterruptHandler(void* context) {
 	    printf("Interrupted by the DE2 timer!\n");
 	}
 }
+
 
 void prototypeOS(){
 
@@ -117,3 +124,11 @@ uint8_t deleted = 0;
 
 
 
+/***********************************************************************
+* Entry Point
+***********************************************************************/
+int main() {
+	printf("PrototypeOS \n");
+	prototypeOS();
+	return 0;
+}

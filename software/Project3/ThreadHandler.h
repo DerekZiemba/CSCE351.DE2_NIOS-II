@@ -18,7 +18,7 @@
 }
 
 /* possible thread states */
-enum ThreadState {NEW, READY, RUNNING, BLOCKED, DONE, NUM_TSTATES};
+enum ThreadState {NEW, READY, RUNNING, BLOCKED, DONE, TERMINATED, NUM_TSTATES};
 
 
 /* thread control block */
@@ -28,9 +28,6 @@ typedef struct ThreadControlBlock {
     char threadID;
     uint32_t *sp;
     uint32_t *stack;
-//    struct ThreadControlBlock* parentThread;
-//    LinkedList*  joinedThreads;
-
 } ThreadControlBlock;
 
 

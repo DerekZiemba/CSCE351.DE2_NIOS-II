@@ -6,13 +6,13 @@
  */
 
 #include "LinkedList.h"
-#include <stdlib.h>
+
 #include <stdio.h>
+#include <string.h>
 
 /*******************************************************************************************************
 * These are internal macros for the purpose of making code easier to read
 *******************************************************************************************************/
-#define GetByteAt(dataPtr,byteNumber) (uint8_t)*((uintptr_t*)(&(dataPtr)) + byteNumber)
 
 #define bIsListUnlimitedSize(ls) (ls->maxsize==0)
 #define bListHasNodes(ls) (ls->count > 0)
@@ -52,26 +52,33 @@ uint8_t _VerifyViableGetOperation(LinkedList* ls, uint32_t index) {
 			CheckErrorAndPrint(bIsValidGetAtIndex(ls, index), "ERROR: No node exists at index\n") : 0) : 0;
 }
 
+#define CHECKMALLOC(x, msg) {\
+	if(x == NULL) {\
+        printf("\nUnable to allocate space!\n");\
+        printf(msg);\
+		int i;\
+		for (i = 10000; i > 0; i--);\
+        exit(1);\
+	}\
+}
+
 #define VerifyViableInsertOperation(ls,index) _VerifyViableInsertOperation(ls, index)
 #define VerifyViableGetOperation(ls,index) _VerifyViableGetOperation(ls, index)
 #else
 #define VerifyViableInsertOperation(ls,index)  1 //Will always just true otherwise
 #define VerifyViableGetOperation(ls,index)  1 //Will always just true otherwise
+#define CHECKMALLOC(x, msg){int asdfjkqweroiuyuxozhvg=0;}
 #endif
-
-#define CHECKMALLOC(x, msg) {					\
-	if(x == NULL) {								\
-        printf("\nUnable to allocate space!\n");	\
-        printf(msg);							\
-        exit(1);								\
-	}											\
-}
 
 
 /*******************************************************************************************************
 * Node Functions
 *******************************************************************************************************/
 node_t* Node_CreateNew(void *data) {
+	if(data == NULL){
+		printf("NULL VALUE BEEING ADDED TO LIST!!!!  Break now to see stack.");
+		while(data==NULL){	}
+	}
 	node_t  *n = (node_t*) malloc(sizeof(node_t));
 	CHECKMALLOC(n,"LinkedList Node");
 	n->data = data;
@@ -81,7 +88,7 @@ node_t* Node_CreateNew(void *data) {
 }
 
 //Gets the node at the index.  Do not free this node without splicing the list.
-node_t* Node_GetNodeAtIndex(LinkedList* ls, const uint32_t index) {
+node_t* Node_GetNodeAtIndex(LinkedList* ls, const size_t index) {
 	if (VerifyViableGetOperation(ls, index)) {
 		node_t* node = NULL;
 		uint32_t i = 1;
@@ -102,7 +109,7 @@ node_t* Node_GetNodeAtIndex(LinkedList* ls, const uint32_t index) {
 	return NULL;
 }
 
-node_t* Node_GetNodeByElement(LinkedList* ls,  void* elementRef) {
+node_t* Node_GetNodeByElement(LinkedList* ls, const void* elementRef) {
 	if (VerifyViableGetOperation(ls, 0)) {
 		node_t* node = ls->firstNode;
 		while (node != NULL) {
@@ -147,7 +154,7 @@ node_t* Node_RemoveNode(LinkedList* ls, node_t* node) {
 }
 
 
-node_t* Node_InsertNode(LinkedList* ls, uint32_t index, node_t* newNode) {
+node_t* Node_InsertNode(LinkedList* ls, const size_t index, node_t* newNode) {
 	if (VerifyViableInsertOperation(ls, index)) {
 		//First things first, wipe out any references to any other parent or child
 		newNode->parentNode = NULL;
@@ -181,14 +188,13 @@ node_t* Node_InsertNode(LinkedList* ls, uint32_t index, node_t* newNode) {
 }
 
 
-
 /*******************************************************************************************************
 * Internal Node functions that the List implementation already exposes in some way.
 *******************************************************************************************************/
 /*returns index of foundNode from the rootnode*/
-int32_t Node_GetElementIndex(LinkedList* ls, void* elementRef)  {
-	if (VerifyViableGetOperation(ls, 0)) {
-		node_t* node = ls->firstNode;
+size_t Node_GetChildIndex(node_t* rootnode, void* elementRef)  {
+	if(rootnode != NULL){
+		node_t* node = rootnode;
 		uint32_t index = 0;
 		while (node != NULL) {
 			if (node->data == elementRef) {
@@ -226,7 +232,7 @@ void LinkedList_Free(LinkedList* ls) {
 	ls = NULL;
 }
 
-LinkedList* LinkedList_CreateNew(uint32_t max_size) {
+LinkedList* LinkedList_CreateNew(size_t max_size) {
 	LinkedList *ls = malloc(sizeof(LinkedList));
 	CHECKMALLOC(ls,"LinkedList");
 	ls->maxsize = max_size;
@@ -237,41 +243,48 @@ LinkedList* LinkedList_CreateNew(uint32_t max_size) {
 }
 
 
-//Mallocs bytes, be sure to free later.
-uint8_t* LinkedList_ToByteStream(const LinkedList* ls, const int elementByteSize) {
-	if (bIsValidList(ls) && bListHasNodes(ls)) {
-		uint8_t* buffer = malloc(ls->count * elementByteSize);
-		node_t* node = ls->firstNode;
-		int offset = 0;
-		while (node != NULL) {
-			int byteNum = 0;
-			for (byteNum = 0; byteNum < elementByteSize; byteNum++) {
-				buffer[offset] = GetByteAt(node->data, byteNum);
-				offset++;
-			}
-			node = node->childNode;
+LinkedList* LinkedList_CreateNewFromArray(uint8_t* byte_stream, size_t element_byte_size, size_t start_index, size_t count) {
+	LinkedList *ls = LinkedList_CreateNew(0);
+	uint32_t i = 0;
+		for (i = 0; i < count; i++) {
+			EnqueueElement(ls, (void*)byte_stream[(start_index + i) * element_byte_size]);
 		}
-		return buffer;
+	return ls;
+}
+
+//Mallocs bytes, be sure to free later.
+#define GetByteAt(dataPtr,byteNumber) (uint8_t)*((uintptr_t*)(&(dataPtr)) + byteNumber)
+uint8_t* LinkedList_ToArray(LinkedList* ls, int elementByteSize) {
+	uint8_t* buffer = malloc(ls->count * elementByteSize);
+	node_t* node = ls->firstNode;
+	int offset = 0;
+	while (node != NULL) {
+		int byteNum = 0;
+		for (byteNum = 0; byteNum < elementByteSize; byteNum++) {
+			buffer[offset] = GetByteAt(node->data, byteNum);
+			offset++;
+		}
+		node = node->childNode;
 	}
-	return NULL;
+	return buffer;
 }
 
 
 //This creates a new node and adds the value to it
-void LinkedList_InsertElementAtIndex(LinkedList* ls, uint32_t index, void* value) {
+void LinkedList_InsertElementAtIndex(LinkedList* ls, size_t index, void* value) {
 	Node_InsertNode(ls, index, Node_CreateNew(value));
 }
 
 
 //This does not remove the value from the list.
-void* LinkedList_GetElementAtIndex(LinkedList* ls, uint32_t index) {
+void* LinkedList_GetElementAtIndex(LinkedList* ls, size_t index) {
 	node_t* node = Node_GetNodeAtIndex(ls, index);
 	return node == NULL ? NULL : node->data;
 }
 
 /*returns index of foundNode from the rootnode*/
-int32_t LinkedList_GetElementIndex(LinkedList* ls, void* elementRef)  {
-	return Node_GetElementIndex(ls,elementRef);
+size_t LinkedList_GetElementIndex(LinkedList* ls, void* elementRef)  {
+	return VerifyViableGetOperation(ls, 0) ? Node_GetChildIndex(ls->firstNode,elementRef) : -1;
 }
 
 
@@ -281,7 +294,7 @@ void* LinkedList_RemoveElement(LinkedList* ls, void* element) {
 
 
 //This removes the value from the list and frees the node.
-void* LinkedList_RemoveElementAtIndex(LinkedList* ls, uint32_t index) {
+void* LinkedList_RemoveElementAtIndex(LinkedList* ls, size_t index) {
 	return Node_RemoveAndFreeNode(ls, Node_GetNodeAtIndex(ls, index));
 }
 
@@ -309,40 +322,18 @@ void* PeekElement(LinkedList* ls) {
 	return LinkedList_GetElementAtIndex(ls, 0);
 }
 
-//Remove all references to the value in the list regardless of position
 void* RemoveElement(LinkedList* ls, void* element) {
-	void* foundValue = NULL;
 	if (VerifyViableGetOperation(ls, 0)) {
 		node_t* node = ls->firstNode;
 		while (node != NULL) {
-			node = node->childNode;
-			if (node->parentNode->data == element) {
-				foundValue = Node_RemoveAndFreeNode(ls,node->parentNode);
+			if (node->data == element) {
+				return Node_RemoveAndFreeNode(ls,node);
 			}
+			node = node->childNode;
 		}
-	}
-	return foundValue;
-}
-
-/*The first element goes to the end and the second element becomes the first. Returns the new first element*/
-void* RotateWrapAndPeek(LinkedList* ls) {
-	if (VerifyViableGetOperation(ls, 1)) { //Should be at least 2 nodes
-
-		node_t* oldFirstNode = ls->firstNode;
-		ls->firstNode = oldFirstNode->childNode;
-		ls->firstNode->parentNode = NULL;
-
-		ls->lastNode->childNode = oldFirstNode;
-		oldFirstNode->parentNode = ls->lastNode;
-		ls->lastNode = oldFirstNode;
-		oldFirstNode->childNode = NULL;
-
-		return ls->firstNode;
 	}
 	return NULL;
 }
-
-
 
 
 
