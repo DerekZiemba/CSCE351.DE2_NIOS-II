@@ -27,7 +27,9 @@
 
 /*Disables interrupts if they were not already disabled*/
 #define CONDITIONALLY_DISABLE_INTERRUPTS  uint8_t nCondDisable = 0; if(bCheckInterruptsEnabled()){ DISABLE_INTERRUPTS(); nCondDisable = 1; }
-/*Enables interrupts only if the prior call to CONDITIONALLY_DISABLE_INTERRUPTS disabled interrupts, else maintain current interrupt status. */
+/*Enables interrupts only if the prior call to CONDITIONALLY_DISABLE_INTERRUPTS disabled interrupts,
+ *  else maintain current interrupt status.
+ *   This is so functions that disable interrupts won't make a call to another function that enables them. */
 #define CONDITIONALLY_ENABLE_INTERRUPTS if(nCondDisable){ENABLE_INTERRUPTS();}
 
 

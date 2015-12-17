@@ -12,21 +12,17 @@
 
 
 // It returns the starting address a semaphore variable.
-// You can use malloc() to allocate memory space.
 MySem* mysem_create(int32_t count, char* name) {
 	MySem  *sem = malloc(sizeof(MySem));
 	sem->lsBlockedThreads = LinkedList_CreateNew(0);
 	sem->count = count;
 	sem->name = name;
-	//printf("Semaphore created with initial count: %d\n", sem->count);
 	return sem;
 }
 
 // semaphore's signal operation.
 void mysem_up( MySem* sem ) {
-	//DISABLE_INTERRUPTS();
 	sem->count = sem->count + 1;
-
 	//ThreadControlBlock *currentThread = GetRunningThread();
 	//printf("---> MySem_Up on %s semaphore By %s_%c, . Updated count: %d\n", sem->name,currentThread->threadName, currentThread->threadID, sem->count);
 
@@ -38,48 +34,43 @@ void mysem_up( MySem* sem ) {
 			printf("\n-------> Semaphore %s Unblocked: %s_%c. Threads waiting: %lu  ",sem->name,blockedThread->threadName, blockedThread->threadID, sem->lsBlockedThreads->count);
 		}
 	}
-	//ENABLE_INTERRUPTS();
 }
 
 //semaphore's wait operation.
 void mysem_down( MySem* sem ) {
-	//DISABLE_INTERRUPTS();
-	ThreadControlBlock *currentThread = GetRunningThread();
 
+	ThreadControlBlock *currentThread = GetRunningThread();
 	 //printf("Wait on semaphore. Updated count: %d\n", sem->count);
 	//printf("---> MySem_Down on %s semaphore By %s_%c. Updated count: %d\n", sem->name,currentThread->threadName, currentThread->threadID, sem->count);
 	if(sem->count > 0) {
 		sem->count = sem->count - 1;
-	//	ENABLE_INTERRUPTS();
 	}
 	else if (sem->count <= 0){
 		if (sem->count < 0){
-			printf("\n BAD THINGS HERE\n");
+			printf("\n BAD THINGS !!!!\n");
 		}
+
 		EnqueueElement(sem->lsBlockedThreads, currentThread);
 		printf("\n-------> Semaphore %s: BlockedID: %s_%c. Threads waiting: %lu  ",sem->name,currentThread->threadName, currentThread->threadID, sem->lsBlockedThreads->count);
 
 		BlockThread(currentThread);
 
-		//Make the locking thread a child of the current thread so that the lockign thread will finish.
-		//mythread_join(currentThread, sem->LockingThread);
-
 		while (currentThread->tstate == BLOCKED){
+			//I tried to make it trigger an interrupt that allowed the thread handler to run, but it just results in bad things...
 			//FORFEIT_TIME_SLICE();
 		}
 		mysem_down(sem);
 	}
+
 
 }
 
 void mysem_delete( MySem* sem ) {
 	if(sem != NULL){
 		printf("\nDeleting semaphore.  ");
-	//	DISABLE_INTERRUPTS();
 		free(sem->lsBlockedThreads);
 		free(sem);
 		sem = NULL;
-	//	ENABLE_INTERRUPTS();
 	}
 }
 

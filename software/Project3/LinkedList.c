@@ -262,6 +262,7 @@ uint8_t* LinkedList_ToArray(LinkedList* ls, int elementByteSize) {
 		int byteNum = 0;
 		for (byteNum = 0; byteNum < elementByteSize; byteNum++) {
 			buffer[offset] = GetByteAt(node->data, byteNum);
+			buffer[offset] =(uint8_t)*((uintptr_t*)(&(node->data)) +  byteNum);
 			offset++;
 		}
 		node = node->childNode;

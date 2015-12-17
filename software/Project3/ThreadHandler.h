@@ -24,11 +24,6 @@ enum ThreadState {NEW, READY, RUNNING, BLOCKED, DONE, TERMINATED, NUM_TSTATES};
 /* thread control block */
 typedef struct ThreadControlBlock {
     enum ThreadState  tstate;
-    /*The number of threads blocked on this thread.
-     * Thread scheduler will take this number into account
-     * relative to the total system threads then assign a priority.
-     * If this thread is blocking 4 out of 10 threads it will get 4/10th second scheduled time.*/
-    int8_t blockingThreads;
     char* threadName;
     char threadID;
     uint32_t *sp;

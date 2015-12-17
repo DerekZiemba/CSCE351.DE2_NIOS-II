@@ -45,7 +45,6 @@ void InitializeThreadHandler(){
 uint32_t GetActiveThreadCount(){
 	CONDITIONALLY_DISABLE_INTERRUPTS
 	uint32_t threadCount = 1 + lsActiveThreads->count;
-	//uint32_t threadCount = (RunningThread != NULL ? 1 : 0) + lsActiveThreads->count;
 	CONDITIONALLY_ENABLE_INTERRUPTS
     return threadCount;
 }
@@ -89,13 +88,13 @@ void StartThread(ThreadControlBlock *thread){
 		else if(thread->tstate == BLOCKED ) {
 			if(thread != RunningThread){
 				//Move it to the front of the queue.
-				ThreadControlBlock* removed = RemoveElement(lsActiveThreads,thread);
-				if(removed != NULL){
-					PushElement(lsActiveThreads, removed );
-				} else{
-					printf("!!!!!ROGUE THREAD!!!!!!!!");
-					while(1){};
-				}
+				//ThreadControlBlock* removed = RemoveElement(lsActiveThreads,thread);
+//				if(removed != NULL){
+//					//PushElement(lsActiveThreads, removed );
+//				} else{
+//					printf("!!!!!ROGUE THREAD!!!!!!!!");
+//					while(1){};
+//				}
 			}
 		}
 		thread->tstate = READY;

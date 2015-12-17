@@ -7,7 +7,7 @@
 
 
 /* a delay time used to  adjust the frequency of printf messages */
-#define MAX 70000
+#define MAX 40000
 //#define HONEY_DELAY MAX/2
 #define BEES 10
 #define BEARS 1
@@ -77,7 +77,7 @@ void Bear(char threadID) {
 
 void OnInterruptHandler(void* context) {
 	if(GetActiveThreadCount() == 1){
-	    printf("\nInterrupted by the DE2 timer!\n");
+	    printf("\nVirtual Interrupt set for every second.  Thread handler runs every .2 seconds. \n");
 	}
 }
 
@@ -106,13 +106,12 @@ void prototypeOS(){
 		JoinThread(thread);
 	}
 
-
    start_alarm(1000, OnInterruptHandler);
 
     /* an endless while loop */
 uint8_t deleted = 0;
     while (1){
-        printf ("\nThis is the prototypeOS for my exciting CSE351 course projects! ");
+        printf ("\nThis is the prototypeOS for my exciting CSE351 course projects!\n");
         
         /* delay printf for a while */
         for (i = 0; i < 5*MAX; i++);
